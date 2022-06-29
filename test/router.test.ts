@@ -1,7 +1,6 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { BigNumber, ContractReceipt } from "ethers";
-import { isValidMnemonic } from "ethers/lib/utils";
 import { ethers } from "hardhat";
 
 import {

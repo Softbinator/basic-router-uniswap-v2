@@ -31,7 +31,7 @@ contract UniswapV2LibraryMock {
                         hex"ff",
                         factory,
                         keccak256(abi.encodePacked(token0, token1)),
-                        hex"e699c2c70a1e9ca16c58b40782745b5d609738b755845b6ee18a18d21352f753" // init code hash
+                        hex"e699c2c70a1e9ca16c58b40782745b5d609738b755845b6ee18a18d21352f753" // init code hash e699c2c70a1e9ca16c58b40782745b5d609738b755845b6ee18a18d21352f753
                     )
                 )
             )

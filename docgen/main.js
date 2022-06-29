@@ -7182,7 +7182,7 @@
           name: "BogdanRouterV2",
           author: "Softbinator Technologies",
           notice:
-            "This Contract is made after Uniswap V2 router contractDISCLAIMER - These contracts are not audited, use at your own risk!",
+            "This Contract is made after Uniswap V2 router contract DISCLAIMER - These contracts are not audited, use at your own risk!",
           constructor: {
             inputs: [
               { internalType: "address", name: "_factory", type: "address" },
