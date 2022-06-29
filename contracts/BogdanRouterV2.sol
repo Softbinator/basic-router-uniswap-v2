@@ -126,7 +126,7 @@ contract BogdanRouterV2 is IUniswapV2Router02 {
                 IWETH(WETH).deposit{ value: amountETH }();
                 IWETH(WETH).transfer(pair, amountETH);
                 if (amountETH < msg.value) {
-                    TransferHelper.safeTransferETH(msg.sender, amountETH - msg.value);
+                    TransferHelper.safeTransferETH(msg.sender, msg.value - amountETH);
                 }
             } else {
                 TransferHelper.safeTransferFrom(token, msg.sender, pair, amountToken);

@@ -723,6 +723,75 @@ describe("Trade tests", function () {
     ).to.be.revertedWith("Insuficient eth");
   });
 
+  it("Add liquidity eth but required token is not in limits but emount eth is", async () => {
+    await Token1.mint(user.address, ethers.utils.parseEther("10"));
+
+    await Token1.approve(Router.address, ethers.utils.parseEther("100"));
+
+    let amountTokenDesired: BigNumber = ethers.utils.parseEther("2");
+    let amountEth: BigNumber = ethers.utils.parseEther("2");
+    let amountTokenMin: BigNumber = ethers.utils.parseEther("1");
+    let amountEthMin: BigNumber = ethers.utils.parseEther("1");
+
+    await expect(
+      Router.addLiquidityETH(Token1.address, amountTokenDesired, amountTokenMin, amountEthMin, user.address, 1, {
+        value: amountEth,
+      }),
+    )
+      .to.emit(Router, "LiqETH")
+      .withArgs(sqrt(amountTokenDesired.mul(amountEth)).sub(min_liquidity));
+
+    let _totalSupply = sqrt(amountTokenDesired.mul(amountEth));
+
+    amountTokenDesired = ethers.utils.parseEther("4");
+    amountEth = ethers.utils.parseEther("5");
+    amountTokenMin = ethers.utils.parseEther("2");
+    amountEthMin = ethers.utils.parseEther("1.1");
+
+    let reserveA;
+    let reserveB;
+    [reserveA, reserveB] = await UniswapV2LibraryContract.getReserves(
+      UniswapV2Factory.address,
+      Token1.address,
+      WETH.address,
+    );
+    console.log("RESERVE");
+    console.log(reserveA);
+    console.log(reserveB);
+    let requiredBAmount = await UniswapV2LibraryContract.quote(amountTokenDesired, reserveA, reserveB);
+    let emitedLiq = BigNumber.from("0");
+    if (requiredBAmount <= amountEth && requiredBAmount > amountEthMin) {
+      console.log("IF");
+      emitedLiq =
+        amountTokenDesired.mul(_totalSupply).div(reserveA) < requiredBAmount.mul(_totalSupply).div(reserveB)
+          ? amountTokenDesired.mul(_totalSupply).div(reserveA)
+          : requiredBAmount.mul(_totalSupply).div(reserveB);
+    } else {
+      let requiredAAmount = await UniswapV2LibraryContract.quote(amountEth, reserveB, reserveA);
+      if (requiredAAmount <= amountTokenDesired) {
+        if (requiredAAmount >= amountTokenMin) {
+          let condition: Boolean =
+            requiredAAmount.mul(_totalSupply).div(reserveA) <= amountEth.mul(_totalSupply).div(reserveB);
+          emitedLiq = condition
+            ? requiredAAmount.mul(_totalSupply).div(reserveA)
+            : amountEth.mul(_totalSupply).div(reserveB);
+        } else {
+          console.log("ELSE2");
+        }
+      } else {
+        console.log("ELSE3");
+      }
+    }
+
+    await expect(
+      Router.addLiquidityETH(Token1.address, amountTokenDesired, amountTokenMin, amountEthMin, user.address, 1, {
+        value: amountEth,
+      }),
+    )
+      .to.emit(Router, "LiqETH")
+      .withArgs(emitedLiq);
+  });
+
   it("remove liq", async () => {
     // add liq
     await Token1.mint(user.address, ethers.utils.parseEther("10"));
