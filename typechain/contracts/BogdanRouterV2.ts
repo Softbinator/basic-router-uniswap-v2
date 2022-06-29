@@ -329,12 +329,11 @@ export interface BogdanRouterV2Interface extends utils.Interface {
     "RemoveLiquidity(address,uint256,uint256)": EventFragment;
     "RemoveLiquidityETH(address,uint256,uint256)": EventFragment;
     "SwapETHForExactTokens(uint256,uint256)": EventFragment;
-    "SwapExactToTokens(address,address)": EventFragment;
+    "SwapExactETHForTokens(uint256,uint256)": EventFragment;
     "SwapExactTokensForETH(uint256,uint256)": EventFragment;
     "SwapExactTokensForTokens(uint256,uint256)": EventFragment;
     "SwapTokensForExactETH(uint256,uint256)": EventFragment;
     "SwapTokensForExactTokens(uint256,uint256)": EventFragment;
-    "SwapTokensToExact(address,address)": EventFragment;
   };
 
   getEvent(nameOrSignatureOrTopic: "Liq"): EventFragment;
@@ -343,12 +342,11 @@ export interface BogdanRouterV2Interface extends utils.Interface {
   getEvent(nameOrSignatureOrTopic: "RemoveLiquidity"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "RemoveLiquidityETH"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "SwapETHForExactTokens"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "SwapExactToTokens"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "SwapExactETHForTokens"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "SwapExactTokensForETH"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "SwapExactTokensForTokens"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "SwapTokensForExactETH"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "SwapTokensForExactTokens"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "SwapTokensToExact"): EventFragment;
 }
 
 export interface LiqEventObject {
@@ -398,13 +396,13 @@ export type SwapETHForExactTokensEvent = TypedEvent<[BigNumber, BigNumber], Swap
 
 export type SwapETHForExactTokensEventFilter = TypedEventFilter<SwapETHForExactTokensEvent>;
 
-export interface SwapExactToTokensEventObject {
-  arg0: string;
-  arg1: string;
+export interface SwapExactETHForTokensEventObject {
+  amountIn: BigNumber;
+  amountOut: BigNumber;
 }
-export type SwapExactToTokensEvent = TypedEvent<[string, string], SwapExactToTokensEventObject>;
+export type SwapExactETHForTokensEvent = TypedEvent<[BigNumber, BigNumber], SwapExactETHForTokensEventObject>;
 
-export type SwapExactToTokensEventFilter = TypedEventFilter<SwapExactToTokensEvent>;
+export type SwapExactETHForTokensEventFilter = TypedEventFilter<SwapExactETHForTokensEvent>;
 
 export interface SwapExactTokensForETHEventObject {
   amountIn: BigNumber;
@@ -437,14 +435,6 @@ export interface SwapTokensForExactTokensEventObject {
 export type SwapTokensForExactTokensEvent = TypedEvent<[BigNumber, BigNumber], SwapTokensForExactTokensEventObject>;
 
 export type SwapTokensForExactTokensEventFilter = TypedEventFilter<SwapTokensForExactTokensEvent>;
-
-export interface SwapTokensToExactEventObject {
-  arg0: string;
-  arg1: string;
-}
-export type SwapTokensToExactEvent = TypedEvent<[string, string], SwapTokensToExactEventObject>;
-
-export type SwapTokensToExactEventFilter = TypedEventFilter<SwapTokensToExactEvent>;
 
 export interface BogdanRouterV2 extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
@@ -1136,8 +1126,8 @@ export interface BogdanRouterV2 extends BaseContract {
     "SwapETHForExactTokens(uint256,uint256)"(amountIn?: null, amountOut?: null): SwapETHForExactTokensEventFilter;
     SwapETHForExactTokens(amountIn?: null, amountOut?: null): SwapETHForExactTokensEventFilter;
 
-    "SwapExactToTokens(address,address)"(arg0?: null, arg1?: null): SwapExactToTokensEventFilter;
-    SwapExactToTokens(arg0?: null, arg1?: null): SwapExactToTokensEventFilter;
+    "SwapExactETHForTokens(uint256,uint256)"(amountIn?: null, amountOut?: null): SwapExactETHForTokensEventFilter;
+    SwapExactETHForTokens(amountIn?: null, amountOut?: null): SwapExactETHForTokensEventFilter;
 
     "SwapExactTokensForETH(uint256,uint256)"(amountIn?: null, amountOut?: null): SwapExactTokensForETHEventFilter;
     SwapExactTokensForETH(amountIn?: null, amountOut?: null): SwapExactTokensForETHEventFilter;
@@ -1150,9 +1140,6 @@ export interface BogdanRouterV2 extends BaseContract {
 
     "SwapTokensForExactTokens(uint256,uint256)"(amountIn?: null, amountOut?: null): SwapTokensForExactTokensEventFilter;
     SwapTokensForExactTokens(amountIn?: null, amountOut?: null): SwapTokensForExactTokensEventFilter;
-
-    "SwapTokensToExact(address,address)"(arg0?: null, arg1?: null): SwapTokensToExactEventFilter;
-    SwapTokensToExact(arg0?: null, arg1?: null): SwapTokensToExactEventFilter;
   };
 
   estimateGas: {

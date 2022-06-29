@@ -67,13 +67,13 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions,
     ): Promise<Contracts.IWETH__factory>;
     getContractFactory(
-      name: "BogdanRouter",
-      signerOrOptions?: ethers.Signer | FactoryOptions,
-    ): Promise<Contracts.BogdanRouter__factory>;
-    getContractFactory(
       name: "BogdanRouterV2",
       signerOrOptions?: ethers.Signer | FactoryOptions,
     ): Promise<Contracts.BogdanRouterV2__factory>;
+    getContractFactory(
+      name: "BogdanRouterV3",
+      signerOrOptions?: ethers.Signer | FactoryOptions,
+    ): Promise<Contracts.BogdanRouterV3__factory>;
     getContractFactory(
       name: "Token",
       signerOrOptions?: ethers.Signer | FactoryOptions,
@@ -125,8 +125,8 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer,
     ): Promise<Contracts.IUniswapV2Router02>;
     getContractAt(name: "IWETH", address: string, signer?: ethers.Signer): Promise<Contracts.IWETH>;
-    getContractAt(name: "BogdanRouter", address: string, signer?: ethers.Signer): Promise<Contracts.BogdanRouter>;
     getContractAt(name: "BogdanRouterV2", address: string, signer?: ethers.Signer): Promise<Contracts.BogdanRouterV2>;
+    getContractAt(name: "BogdanRouterV3", address: string, signer?: ethers.Signer): Promise<Contracts.BogdanRouterV3>;
     getContractAt(name: "Token", address: string, signer?: ethers.Signer): Promise<Contracts.Token>;
     getContractAt(
       name: "UniswapV2Factory",

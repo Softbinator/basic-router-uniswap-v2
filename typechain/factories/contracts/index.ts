@@ -3,8 +3,8 @@
 /* eslint-disable */
 export * as uniswapV2LibrarySol from "./UniswapV2Library.sol";
 export * as wethSol from "./WETH.sol";
-export { BogdanRouter__factory } from "./BogdanRouter__factory";
 export { BogdanRouterV2__factory } from "./BogdanRouterV2__factory";
+export { BogdanRouterV3__factory } from "./BogdanRouterV3__factory";
 export { Token__factory } from "./Token__factory";
 export { UniswapV2Factory__factory } from "./UniswapV2Factory__factory";
 export { UniswapV2PairC__factory } from "./UniswapV2PairC__factory";

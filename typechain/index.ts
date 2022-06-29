@@ -37,10 +37,10 @@ export type { IUniswapV2Router02 } from "./@uniswap/v2-periphery/contracts/inter
 export { IUniswapV2Router02__factory } from "./factories/@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02__factory";
 export type { IWETH } from "./@uniswap/v2-periphery/contracts/interfaces/IWETH";
 export { IWETH__factory } from "./factories/@uniswap/v2-periphery/contracts/interfaces/IWETH__factory";
-export type { BogdanRouter } from "./contracts/BogdanRouter";
-export { BogdanRouter__factory } from "./factories/contracts/BogdanRouter__factory";
 export type { BogdanRouterV2 } from "./contracts/BogdanRouterV2";
 export { BogdanRouterV2__factory } from "./factories/contracts/BogdanRouterV2__factory";
+export type { BogdanRouterV3 } from "./contracts/BogdanRouterV3";
+export { BogdanRouterV3__factory } from "./factories/contracts/BogdanRouterV3__factory";
 export type { Token } from "./contracts/Token";
 export { Token__factory } from "./factories/contracts/Token__factory";
 export type { UniswapV2Factory } from "./contracts/UniswapV2Factory";

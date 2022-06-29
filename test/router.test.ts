@@ -9,21 +9,17 @@ import {
   BogdanRouterV2__factory,
   Token,
   Token__factory,
-  UniswapV2ERC20,
-  UniswapV2ERC20__factory,
   UniswapV2Factory,
   UniswapV2Factory__factory,
   UniswapV2LibraryMock,
   UniswapV2LibraryMock__factory,
-  UniswapV2Pair,
   UniswapV2PairC,
   UniswapV2PairC__factory,
-  UniswapV2Pair__factory,
   WETH9,
   WETH9__factory,
 } from "../typechain";
 
-describe("Trade tests", function () {
+describe("Router tests", function () {
   let Router: BogdanRouterV2;
   let WETH: WETH9;
   let UniswapV2Factory: UniswapV2Factory;
@@ -694,7 +690,6 @@ describe("Trade tests", function () {
     let requiredBAmount = await UniswapV2LibraryContract.quote(amountTokenDesired, reserveA, reserveB);
     let emitedLiq = BigNumber.from("0");
     if (requiredBAmount <= amountEth && requiredBAmount > amountEthMin) {
-      console.log("IF");
       emitedLiq =
         amountTokenDesired.mul(_totalSupply).div(reserveA) < requiredBAmount.mul(_totalSupply).div(reserveB)
           ? amountTokenDesired.mul(_totalSupply).div(reserveA)
@@ -755,9 +750,6 @@ describe("Trade tests", function () {
       Token1.address,
       WETH.address,
     );
-    console.log("RESERVE");
-    console.log(reserveA);
-    console.log(reserveB);
     let requiredBAmount = await UniswapV2LibraryContract.quote(amountTokenDesired, reserveA, reserveB);
     let emitedLiq = BigNumber.from("0");
     if (requiredBAmount <= amountEth && requiredBAmount > amountEthMin) {
@@ -1422,7 +1414,7 @@ describe("Trade tests", function () {
     let path = [WETH.address, Token1.address, Token2.address, Token3.address, Token4.address];
     let amounts: BigNumber[] = await UniswapV2LibraryContract.getAmountsOut(UniswapV2Factory.address, amountIn, path);
     await expect(Router.swapExactETHForTokens(amountOutMin, path, user.address, 1, { value: amountIn }))
-      .to.emit(Router, "SwapExactTokensForTokens")
+      .to.emit(Router, "SwapExactETHForTokens")
       .withArgs(amountIn, amounts[amounts.length - 1]);
   });
 
@@ -1447,7 +1439,6 @@ describe("Trade tests", function () {
     let path = [WETH.address, Token1.address, Token2.address, Token3.address, Token4.address];
     let amounts: BigNumber[] = await UniswapV2LibraryContract.getAmountsOut(UniswapV2Factory.address, amountIn, path);
 
-    console.log(amounts[amounts.length - 1]);
     await expect(
       Router.swapExactETHForTokens(amountOutMin, path, user.address, 1, { value: amountIn }),
     ).to.be.revertedWith("Insufficient amount");
@@ -1498,7 +1489,7 @@ describe("Trade tests", function () {
     let path = [WETH.address, Token1.address, Token2.address];
     let amounts: BigNumber[] = await UniswapV2LibraryContract.getAmountsOut(UniswapV2Factory.address, amountIn, path);
     await expect(Router.swapExactETHForTokens(amountOutMin, path, user.address, 1, { value: amountIn }))
-      .to.emit(Router, "SwapExactTokensForTokens")
+      .to.emit(Router, "SwapExactETHForTokens")
       .withArgs(amountIn, amounts[amounts.length - 1]);
   });
 
@@ -1598,7 +1589,6 @@ describe("Trade tests", function () {
     let amountOut = ethers.utils.parseEther("0.1");
     let path = [Token1.address, Token2.address, Token3.address, WETH.address];
     let amounts: BigNumber[] = await UniswapV2LibraryContract.getAmountsIn(UniswapV2Factory.address, amountOut, path);
-    console.log("DEBUG 1");
     await expect(Router.swapTokensForExactETH(amountOut, amountInMax, path, user.address, 1))
       .to.emit(Router, "SwapTokensForExactETH")
       .withArgs(amounts[0], amountOut);

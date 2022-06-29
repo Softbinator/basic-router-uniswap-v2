@@ -4,6 +4,7 @@ import "@typechain/hardhat";
 import { config as dotenvConfig } from "dotenv";
 import { ethers } from "ethers";
 import "hardhat-contract-sizer";
+import "hardhat-docgen";
 import "hardhat-gas-reporter";
 import { HardhatUserConfig } from "hardhat/config";
 import { NetworkUserConfig } from "hardhat/types";
@@ -72,6 +73,10 @@ function getChainConfig(chain: keyof typeof chainIds): NetworkUserConfig {
 }
 
 const config: HardhatUserConfig = {
+  docgen: {
+    path: "./docgen",
+    runOnCompile: process.env.RUN_DOCGEN == "TRUE" ? true : false,
+  },
   defaultNetwork: "hardhat",
   etherscan: {
     apiKey: {

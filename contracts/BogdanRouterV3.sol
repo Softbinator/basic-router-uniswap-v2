@@ -17,7 +17,7 @@ import "hardhat/console.sol";
  * @notice This Contract is made after Uniswap V2 router contract
  * @notice DISCLAIMER - These contracts are not audited, use at your own risk!
  */
-contract BogdanRouterV2 is IUniswapV2Router02 {
+contract BogdanRouterV3 is IUniswapV2Router02 {
     /// @notice Factory contract that creates pairs of lp
     address public override factory;
 

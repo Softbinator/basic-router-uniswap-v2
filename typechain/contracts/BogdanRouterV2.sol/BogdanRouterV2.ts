@@ -327,16 +327,26 @@ export interface BogdanRouterV2Interface extends utils.Interface {
     "LiqETH(uint256)": EventFragment;
     "Liquidity(uint256)": EventFragment;
     "RemoveLiquidity(address,uint256,uint256)": EventFragment;
-    "SwapExactToTokens(address,address)": EventFragment;
-    "SwapTokensToExact(address,address)": EventFragment;
+    "RemoveLiquidityETH(address,uint256,uint256)": EventFragment;
+    "SwapETHForExactTokens(uint256,uint256)": EventFragment;
+    "SwapExactETHForTokens(uint256,uint256)": EventFragment;
+    "SwapExactTokensForETH(uint256,uint256)": EventFragment;
+    "SwapExactTokensForTokens(uint256,uint256)": EventFragment;
+    "SwapTokensForExactETH(uint256,uint256)": EventFragment;
+    "SwapTokensForExactTokens(uint256,uint256)": EventFragment;
   };
 
   getEvent(nameOrSignatureOrTopic: "Liq"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "LiqETH"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Liquidity"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "RemoveLiquidity"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "SwapExactToTokens"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "SwapTokensToExact"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "RemoveLiquidityETH"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "SwapETHForExactTokens"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "SwapExactETHForTokens"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "SwapExactTokensForETH"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "SwapExactTokensForTokens"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "SwapTokensForExactETH"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "SwapTokensForExactTokens"): EventFragment;
 }
 
 export interface LiqEventObject {
@@ -369,21 +379,62 @@ export type RemoveLiquidityEvent = TypedEvent<[string, BigNumber, BigNumber], Re
 
 export type RemoveLiquidityEventFilter = TypedEventFilter<RemoveLiquidityEvent>;
 
-export interface SwapExactToTokensEventObject {
+export interface RemoveLiquidityETHEventObject {
   arg0: string;
-  arg1: string;
+  arg1: BigNumber;
+  arg2: BigNumber;
 }
-export type SwapExactToTokensEvent = TypedEvent<[string, string], SwapExactToTokensEventObject>;
+export type RemoveLiquidityETHEvent = TypedEvent<[string, BigNumber, BigNumber], RemoveLiquidityETHEventObject>;
 
-export type SwapExactToTokensEventFilter = TypedEventFilter<SwapExactToTokensEvent>;
+export type RemoveLiquidityETHEventFilter = TypedEventFilter<RemoveLiquidityETHEvent>;
 
-export interface SwapTokensToExactEventObject {
-  arg0: string;
-  arg1: string;
+export interface SwapETHForExactTokensEventObject {
+  amountIn: BigNumber;
+  amountOut: BigNumber;
 }
-export type SwapTokensToExactEvent = TypedEvent<[string, string], SwapTokensToExactEventObject>;
+export type SwapETHForExactTokensEvent = TypedEvent<[BigNumber, BigNumber], SwapETHForExactTokensEventObject>;
 
-export type SwapTokensToExactEventFilter = TypedEventFilter<SwapTokensToExactEvent>;
+export type SwapETHForExactTokensEventFilter = TypedEventFilter<SwapETHForExactTokensEvent>;
+
+export interface SwapExactETHForTokensEventObject {
+  amountIn: BigNumber;
+  amountOut: BigNumber;
+}
+export type SwapExactETHForTokensEvent = TypedEvent<[BigNumber, BigNumber], SwapExactETHForTokensEventObject>;
+
+export type SwapExactETHForTokensEventFilter = TypedEventFilter<SwapExactETHForTokensEvent>;
+
+export interface SwapExactTokensForETHEventObject {
+  amountIn: BigNumber;
+  amountOut: BigNumber;
+}
+export type SwapExactTokensForETHEvent = TypedEvent<[BigNumber, BigNumber], SwapExactTokensForETHEventObject>;
+
+export type SwapExactTokensForETHEventFilter = TypedEventFilter<SwapExactTokensForETHEvent>;
+
+export interface SwapExactTokensForTokensEventObject {
+  amountIn: BigNumber;
+  amountOut: BigNumber;
+}
+export type SwapExactTokensForTokensEvent = TypedEvent<[BigNumber, BigNumber], SwapExactTokensForTokensEventObject>;
+
+export type SwapExactTokensForTokensEventFilter = TypedEventFilter<SwapExactTokensForTokensEvent>;
+
+export interface SwapTokensForExactETHEventObject {
+  amountIn: BigNumber;
+  amountOut: BigNumber;
+}
+export type SwapTokensForExactETHEvent = TypedEvent<[BigNumber, BigNumber], SwapTokensForExactETHEventObject>;
+
+export type SwapTokensForExactETHEventFilter = TypedEventFilter<SwapTokensForExactETHEvent>;
+
+export interface SwapTokensForExactTokensEventObject {
+  amountIn: BigNumber;
+  amountOut: BigNumber;
+}
+export type SwapTokensForExactTokensEvent = TypedEvent<[BigNumber, BigNumber], SwapTokensForExactTokensEventObject>;
+
+export type SwapTokensForExactTokensEventFilter = TypedEventFilter<SwapTokensForExactTokensEvent>;
 
 export interface BogdanRouterV2 extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
@@ -1069,11 +1120,26 @@ export interface BogdanRouterV2 extends BaseContract {
     "RemoveLiquidity(address,uint256,uint256)"(arg0?: null, arg1?: null, arg2?: null): RemoveLiquidityEventFilter;
     RemoveLiquidity(arg0?: null, arg1?: null, arg2?: null): RemoveLiquidityEventFilter;
 
-    "SwapExactToTokens(address,address)"(arg0?: null, arg1?: null): SwapExactToTokensEventFilter;
-    SwapExactToTokens(arg0?: null, arg1?: null): SwapExactToTokensEventFilter;
+    "RemoveLiquidityETH(address,uint256,uint256)"(arg0?: null, arg1?: null, arg2?: null): RemoveLiquidityETHEventFilter;
+    RemoveLiquidityETH(arg0?: null, arg1?: null, arg2?: null): RemoveLiquidityETHEventFilter;
 
-    "SwapTokensToExact(address,address)"(arg0?: null, arg1?: null): SwapTokensToExactEventFilter;
-    SwapTokensToExact(arg0?: null, arg1?: null): SwapTokensToExactEventFilter;
+    "SwapETHForExactTokens(uint256,uint256)"(amountIn?: null, amountOut?: null): SwapETHForExactTokensEventFilter;
+    SwapETHForExactTokens(amountIn?: null, amountOut?: null): SwapETHForExactTokensEventFilter;
+
+    "SwapExactETHForTokens(uint256,uint256)"(amountIn?: null, amountOut?: null): SwapExactETHForTokensEventFilter;
+    SwapExactETHForTokens(amountIn?: null, amountOut?: null): SwapExactETHForTokensEventFilter;
+
+    "SwapExactTokensForETH(uint256,uint256)"(amountIn?: null, amountOut?: null): SwapExactTokensForETHEventFilter;
+    SwapExactTokensForETH(amountIn?: null, amountOut?: null): SwapExactTokensForETHEventFilter;
+
+    "SwapExactTokensForTokens(uint256,uint256)"(amountIn?: null, amountOut?: null): SwapExactTokensForTokensEventFilter;
+    SwapExactTokensForTokens(amountIn?: null, amountOut?: null): SwapExactTokensForTokensEventFilter;
+
+    "SwapTokensForExactETH(uint256,uint256)"(amountIn?: null, amountOut?: null): SwapTokensForExactETHEventFilter;
+    SwapTokensForExactETH(amountIn?: null, amountOut?: null): SwapTokensForExactETHEventFilter;
+
+    "SwapTokensForExactTokens(uint256,uint256)"(amountIn?: null, amountOut?: null): SwapTokensForExactTokensEventFilter;
+    SwapTokensForExactTokens(amountIn?: null, amountOut?: null): SwapTokensForExactTokensEventFilter;
   };
 
   estimateGas: {
