@@ -18,7 +18,11 @@ yarn add @uniswap/v2-core
 yarn add @uniswap/v2-periphery
 ```
 
-Before running the tests make sure to change the init code from node_modules/@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol at line 24
+Before running the tests make sure to change the init code from: 
+
+```sh
+node_modules/@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol at line 24
+```
 
 from
 
