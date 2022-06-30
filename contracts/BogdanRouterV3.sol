@@ -451,6 +451,20 @@ contract BogdanRouterV3 is IUniswapV2Router02 {
         emit SwapTokensForExactETH(amounts[0], amountOut);
     }
 
+    /**
+     * @notice Remove liquidity by setting the allowance for a spender where approval is granted via a signature.
+     * @param tokenA represents the address of the first token
+     * @param tokenB represents the address of the second token
+     * @param liquidity represents liquidity that will be converted to tokens
+     * @param amountAMin represents the minimum amount of the first token to be received
+     * @param amountBMin represents the minimum amount of the second token to be received
+     * @param to represents the address that will consume liquidity
+     * @param deadline represents the timestamp
+     * @param approveMax represents the maximum approval
+     * @param v required for checking signature
+     * @param r required for checking signature
+     * @param s required for checking signature
+     */
     function removeLiquidityWithPermit(
         address tokenA,
         address tokenB,
@@ -470,6 +484,19 @@ contract BogdanRouterV3 is IUniswapV2Router02 {
         (amountA, amountB) = removeLiquidity(tokenA, tokenB, liquidity, amountAMin, amountBMin, to, deadline);
     }
 
+    /**
+     * @notice Remove liquidity by setting the allowance for a spender where approval is granted via a signature.
+     * @param token represents the address of the token
+     * @param liquidity represents liquidity that will be converted to tokens
+     * @param amountTokenMin represents the minimum amount of the token to be received
+     * @param amountETHMin represents the minimum eth amount to be received
+     * @param to represents the address that will consume liquidity
+     * @param deadline represents the timestamp
+     * @param approveMax represents the maximum approval
+     * @param v required for checking signature
+     * @param r required for checking signature
+     * @param s required for checking signature
+     */
     function removeLiquidityETHWithPermit(
         address token,
         uint256 liquidity,
