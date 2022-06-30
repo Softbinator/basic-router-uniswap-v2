@@ -4,8 +4,8 @@ import { BigNumber, ContractReceipt } from "ethers";
 import { ethers } from "hardhat";
 
 import {
-  BogdanRouterV3,
-  BogdanRouterV3__factory,
+  CustomRouterV3,
+  CustomRouterV3__factory,
   Token,
   Token__factory,
   UniswapV2Factory,
@@ -18,8 +18,8 @@ import {
   WETH9__factory,
 } from "../typechain";
 
-describe("Router V# tests", function () {
-  let Router: BogdanRouterV3;
+describe("Router V3 tests", function () {
+  let Router: CustomRouterV3;
   let WETH: WETH9;
   let UniswapV2Factory: UniswapV2Factory;
   let Token1: Token;
@@ -29,7 +29,7 @@ describe("Router V# tests", function () {
   let UniswapV2LibraryContract: UniswapV2LibraryMock;
   let UniswapV2Pair: UniswapV2PairC;
 
-  let RouterFactory: BogdanRouterV3__factory;
+  let RouterFactory: CustomRouterV3__factory;
   let WETHFactory: WETH9__factory;
   let UniswapV2FactoryFactory: UniswapV2Factory__factory;
   let TokenFactory: Token__factory;
@@ -43,7 +43,7 @@ describe("Router V# tests", function () {
 
   before(async function () {
     [user, bob] = await ethers.getSigners();
-    RouterFactory = (await ethers.getContractFactory("BogdanRouterV3", user)) as BogdanRouterV3__factory;
+    RouterFactory = (await ethers.getContractFactory("CustomRouterV3", user)) as CustomRouterV3__factory;
     WETHFactory = (await ethers.getContractFactory("WETH9", user)) as WETH9__factory;
     UniswapV2FactoryFactory = (await ethers.getContractFactory("UniswapV2Factory", user)) as UniswapV2Factory__factory;
     TokenFactory = (await ethers.getContractFactory("Token", user)) as Token__factory;
@@ -1528,7 +1528,7 @@ async function createPairsAndAddLiquidity(
   Token4: Token,
   user: SignerWithAddress,
   UniswapV2FactoryContract: UniswapV2Factory,
-  Router: BogdanRouterV3,
+  Router: CustomRouterV3,
   pair1: boolean,
   pair2: boolean,
   pair3: boolean,
@@ -1630,7 +1630,7 @@ async function addFirstLiquidityTest(
   Token1: Token,
   Token2: Token,
   user: SignerWithAddress,
-  Router: BogdanRouterV3,
+  Router: CustomRouterV3,
 ): Promise<BigNumber> {
   let min_liquidity: BigNumber = BigNumber.from("1000");
   await Token1.mint(user.address, ethers.utils.parseEther("10"));
@@ -1665,7 +1665,7 @@ async function addFirstLiquidityTest(
 async function addFirstLiquidityETHTest(
   Token1: Token,
   user: SignerWithAddress,
-  Router: BogdanRouterV3,
+  Router: CustomRouterV3,
 ): Promise<BigNumber> {
   let min_liquidity: BigNumber = BigNumber.from("1000");
   await Token1.mint(user.address, ethers.utils.parseEther("10"));
