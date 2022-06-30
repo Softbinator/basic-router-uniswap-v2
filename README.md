@@ -95,11 +95,9 @@ If you use VSCode, you can enjoy syntax highlighting for your Solidity code via 
 
 # Contracts
 
-RouterV2 - first try
+CustomRouterV3 - the scope of this repo
 
-RouterV3 - same functionality as RouterV2 with some refactorizations
-
-The rest of contracts are made only to simulate the behavior in tests
+The rest of contracts are made only to simulate the behavior of router in tests
 
 # DISCLAIMER
 
