@@ -4,8 +4,8 @@ import { BigNumber, ContractReceipt } from "ethers";
 import { ethers } from "hardhat";
 
 import {
-  BogdanRouterV2,
-  BogdanRouterV2__factory,
+  BogdanRouterV3,
+  BogdanRouterV3__factory,
   Token,
   Token__factory,
   UniswapV2Factory,
@@ -18,8 +18,8 @@ import {
   WETH9__factory,
 } from "../typechain";
 
-xdescribe("Router tests", function () {
-  let Router: BogdanRouterV2;
+describe("Router V# tests", function () {
+  let Router: BogdanRouterV3;
   let WETH: WETH9;
   let UniswapV2Factory: UniswapV2Factory;
   let Token1: Token;
@@ -29,7 +29,7 @@ xdescribe("Router tests", function () {
   let UniswapV2LibraryContract: UniswapV2LibraryMock;
   let UniswapV2Pair: UniswapV2PairC;
 
-  let RouterFactory: BogdanRouterV2__factory;
+  let RouterFactory: BogdanRouterV3__factory;
   let WETHFactory: WETH9__factory;
   let UniswapV2FactoryFactory: UniswapV2Factory__factory;
   let TokenFactory: Token__factory;
@@ -43,7 +43,7 @@ xdescribe("Router tests", function () {
 
   before(async function () {
     [user, bob] = await ethers.getSigners();
-    RouterFactory = (await ethers.getContractFactory("BogdanRouterV2", user)) as BogdanRouterV2__factory;
+    RouterFactory = (await ethers.getContractFactory("BogdanRouterV3", user)) as BogdanRouterV3__factory;
     WETHFactory = (await ethers.getContractFactory("WETH9", user)) as WETH9__factory;
     UniswapV2FactoryFactory = (await ethers.getContractFactory("UniswapV2Factory", user)) as UniswapV2Factory__factory;
     TokenFactory = (await ethers.getContractFactory("Token", user)) as Token__factory;
@@ -69,7 +69,7 @@ xdescribe("Router tests", function () {
     expect(await Router.factory()).to.be.equal(UniswapV2Factory.address);
   });
 
-  it("Add liquidity without existing a pair", async () => {
+  it("Add liquidity for first time static calculation", async () => {
     await Token1.mint(user.address, ethers.utils.parseEther("10"));
     await Token2.mint(user.address, ethers.utils.parseEther("10"));
 
@@ -97,32 +97,13 @@ xdescribe("Router tests", function () {
       .withArgs("1999999999999999000");
   });
 
-  it("Add liquidity on existing pair", async () => {
-    await Token1.mint(user.address, ethers.utils.parseEther("10"));
-    await Token2.mint(user.address, ethers.utils.parseEther("10"));
-
-    await Token1.approve(Router.address, ethers.utils.parseEther("100"));
-    await Token2.approve(Router.address, ethers.utils.parseEther("100"));
+  it("Add liquidity for second time static calculation", async () => {
+    await addFirstLiquidityTest(Token1, Token2, user, Router);
 
     let amountADesired: BigNumber = ethers.utils.parseEther("2");
     let amountBDesired: BigNumber = ethers.utils.parseEther("2");
     let amountAMin: BigNumber = ethers.utils.parseEther("1");
     let amountBMin: BigNumber = ethers.utils.parseEther("1");
-
-    await expect(
-      Router.addLiquidity(
-        Token1.address,
-        Token2.address,
-        amountADesired,
-        amountBDesired,
-        amountAMin,
-        amountBMin,
-        user.address,
-        1,
-      ),
-    )
-      .to.emit(Router, "Liq")
-      .withArgs("1999999999999999000");
 
     await expect(
       Router.addLiquidity(
@@ -140,37 +121,13 @@ xdescribe("Router tests", function () {
       .withArgs(ethers.utils.parseEther("2"));
   });
 
-  it("Add liquidity on existing pair but with less amount of tokenA ", async () => {
-    await Token1.mint(user.address, ethers.utils.parseEther("10"));
-    await Token2.mint(user.address, ethers.utils.parseEther("10"));
+  it("Add liquidity on existing pair but with less amount of tokenA static calculation", async () => {
+    await addFirstLiquidityTest(Token1, Token2, user, Router);
 
-    await Token1.approve(Router.address, ethers.utils.parseEther("100"));
-    await Token2.approve(Router.address, ethers.utils.parseEther("100"));
-
-    let amountADesired: BigNumber = ethers.utils.parseEther("2");
-    let amountBDesired: BigNumber = ethers.utils.parseEther("2");
-    let amountAMin: BigNumber = ethers.utils.parseEther("1");
-    let amountBMin: BigNumber = ethers.utils.parseEther("1");
-
-    await expect(
-      Router.addLiquidity(
-        Token1.address,
-        Token2.address,
-        amountADesired,
-        amountBDesired,
-        amountAMin,
-        amountBMin,
-        user.address,
-        1,
-      ),
-    )
-      .to.emit(Router, "Liq")
-      .withArgs("1999999999999999000");
-
-    amountADesired = ethers.utils.parseEther("2");
-    amountBDesired = ethers.utils.parseEther("2");
-    amountAMin = ethers.utils.parseEther("2");
-    amountBMin = ethers.utils.parseEther("1.1");
+    let amountADesired = ethers.utils.parseEther("2");
+    let amountBDesired = ethers.utils.parseEther("2");
+    let amountAMin = ethers.utils.parseEther("2");
+    let amountBMin = ethers.utils.parseEther("1.1");
 
     await expect(
       Router.addLiquidity(
@@ -188,67 +145,26 @@ xdescribe("Router tests", function () {
       .withArgs(ethers.utils.parseEther("2"));
   });
 
-  it("Add liquidity on existing pair but with less amount of tokenA dynamic", async () => {
-    await Token1.mint(user.address, ethers.utils.parseEther("10"));
-    await Token2.mint(user.address, ethers.utils.parseEther("10"));
-
-    await Token1.approve(Router.address, ethers.utils.parseEther("100"));
-    await Token2.approve(Router.address, ethers.utils.parseEther("100"));
+  it("Add liquidity on existing pair but with less amount of tokenA", async () => {
+    let _totalSupply = await addFirstLiquidityTest(Token1, Token2, user, Router);
 
     let amountADesired: BigNumber = ethers.utils.parseEther("2");
     let amountBDesired: BigNumber = ethers.utils.parseEther("2");
-    let amountAMin: BigNumber = ethers.utils.parseEther("1");
-    let amountBMin: BigNumber = ethers.utils.parseEther("1");
+    let amountAMin: BigNumber = ethers.utils.parseEther("2");
+    let amountBMin: BigNumber = ethers.utils.parseEther("1.1");
 
-    await expect(
-      Router.addLiquidity(
-        Token1.address,
-        Token2.address,
-        amountADesired,
-        amountBDesired,
-        amountAMin,
-        amountBMin,
-        user.address,
-        1,
-      ),
-    )
-      .to.emit(Router, "Liq")
-      .withArgs(sqrt(amountADesired.mul(amountBDesired)).sub(min_liquidity));
-
-    let _totalSupply = sqrt(amountADesired.mul(amountBDesired));
-
-    amountADesired = ethers.utils.parseEther("2");
-    amountBDesired = ethers.utils.parseEther("2");
-    amountAMin = ethers.utils.parseEther("2");
-    amountBMin = ethers.utils.parseEther("1.1");
-
-    let reserveA;
-    let reserveB;
-    [reserveA, reserveB] = await UniswapV2LibraryContract.getReserves(
-      UniswapV2Factory.address,
-      Token1.address,
-      Token2.address,
+    let liquidity: BigNumber = await simulateAddLiquidity(
+      Token1,
+      Token2,
+      UniswapV2LibraryContract,
+      UniswapV2Factory,
+      amountADesired,
+      amountBDesired,
+      amountAMin,
+      amountBMin,
+      _totalSupply,
     );
 
-    let requiredBAmount = await UniswapV2LibraryContract.quote(amountADesired, reserveA, reserveB);
-    let emitedLiq = BigNumber.from("0");
-    if (requiredBAmount <= amountBDesired && requiredBAmount > amountBMin) {
-      emitedLiq =
-        amountADesired.mul(_totalSupply).div(reserveA) < requiredBAmount.mul(_totalSupply).div(reserveB)
-          ? amountADesired.mul(_totalSupply).div(reserveA)
-          : requiredBAmount.mul(_totalSupply).div(reserveB);
-    } else {
-      let requiredAAmount = await UniswapV2LibraryContract.quote(amountBDesired, reserveB, reserveA);
-      if (requiredAAmount <= amountADesired) {
-        if (requiredAAmount >= amountAMin) {
-          emitedLiq =
-            requiredAAmount.mul(_totalSupply).div(reserveA) < amountBDesired.mul(_totalSupply).div(reserveB)
-              ? requiredAAmount.mul(_totalSupply).div(reserveA)
-              : amountBDesired.mul(_totalSupply).div(reserveB);
-        }
-      }
-    }
-
     await expect(
       Router.addLiquidity(
         Token1.address,
@@ -262,73 +178,28 @@ xdescribe("Router tests", function () {
       ),
     )
       .to.emit(Router, "Liq")
-      .withArgs(emitedLiq);
+      .withArgs(liquidity);
   });
 
-  it("Add liquidity on existing pair but required B is not in limits dynamic", async () => {
-    await Token1.mint(user.address, ethers.utils.parseEther("10"));
-    await Token2.mint(user.address, ethers.utils.parseEther("10"));
+  it("Add liquidity for second time, with required B not in limits, but A is", async () => {
+    let _totalSupply = await addFirstLiquidityTest(Token1, Token2, user, Router);
 
-    await Token1.approve(Router.address, ethers.utils.parseEther("100"));
-    await Token2.approve(Router.address, ethers.utils.parseEther("100"));
+    let amountADesired = ethers.utils.parseEther("4");
+    let amountBDesired = ethers.utils.parseEther("2");
+    let amountAMin = ethers.utils.parseEther("2");
+    let amountBMin = ethers.utils.parseEther("1.1");
 
-    let amountADesired: BigNumber = ethers.utils.parseEther("2");
-    let amountBDesired: BigNumber = ethers.utils.parseEther("2");
-    let amountAMin: BigNumber = ethers.utils.parseEther("1");
-    let amountBMin: BigNumber = ethers.utils.parseEther("1");
-
-    await expect(
-      Router.addLiquidity(
-        Token1.address,
-        Token2.address,
-        amountADesired,
-        amountBDesired,
-        amountAMin,
-        amountBMin,
-        user.address,
-        1,
-      ),
-    )
-      .to.emit(Router, "Liq")
-      .withArgs(sqrt(amountADesired.mul(amountBDesired)).sub(min_liquidity));
-
-    let _totalSupply = sqrt(amountADesired.mul(amountBDesired));
-
-    amountADesired = ethers.utils.parseEther("4");
-    amountBDesired = ethers.utils.parseEther("2");
-    amountAMin = ethers.utils.parseEther("2");
-    amountBMin = ethers.utils.parseEther("1.1");
-
-    let reserveA;
-    let reserveB;
-    [reserveA, reserveB] = await UniswapV2LibraryContract.getReserves(
-      UniswapV2Factory.address,
-      Token1.address,
-      Token2.address,
+    let liquidity: BigNumber = await simulateAddLiquidity(
+      Token1,
+      Token2,
+      UniswapV2LibraryContract,
+      UniswapV2Factory,
+      amountADesired,
+      amountBDesired,
+      amountAMin,
+      amountBMin,
+      _totalSupply,
     );
-    let requiredBAmount = await UniswapV2LibraryContract.quote(amountADesired, reserveA, reserveB); // 4, 2,2
-    let emitedLiq = BigNumber.from("0");
-    if (requiredBAmount <= amountBDesired && requiredBAmount > amountBMin) {
-      emitedLiq =
-        amountADesired.mul(_totalSupply).div(reserveA) < requiredBAmount.mul(_totalSupply).div(reserveB)
-          ? amountADesired.mul(_totalSupply).div(reserveA)
-          : requiredBAmount.mul(_totalSupply).div(reserveB);
-    } else {
-      let requiredAAmount = await UniswapV2LibraryContract.quote(amountBDesired, reserveB, reserveA);
-      if (requiredAAmount <= amountADesired) {
-        if (requiredAAmount >= amountAMin) {
-          let condition: Boolean =
-            requiredAAmount.mul(_totalSupply).div(reserveA) <= amountBDesired.mul(_totalSupply).div(reserveB);
-          emitedLiq = condition
-            ? requiredAAmount.mul(_totalSupply).div(reserveA)
-            : amountBDesired.mul(_totalSupply).div(reserveB);
-        } else {
-          console.log("ELSE2");
-        }
-      } else {
-        console.log("ELSE3");
-      }
-    }
 
     await expect(
       Router.addLiquidity(
@@ -343,73 +214,28 @@ xdescribe("Router tests", function () {
       ),
     )
       .to.emit(Router, "Liq")
-      .withArgs(emitedLiq);
+      .withArgs(liquidity);
   });
 
-  it("Add liquidity on existing pair but required B is not in limits and require A < min A dynamic", async () => {
-    await Token1.mint(user.address, ethers.utils.parseEther("10"));
-    await Token2.mint(user.address, ethers.utils.parseEther("10"));
+  it("Add liquidity for second time, with required B not in limits and require A < min A", async () => {
+    let _totalSupply = await addFirstLiquidityTest(Token1, Token2, user, Router);
 
-    await Token1.approve(Router.address, ethers.utils.parseEther("100"));
-    await Token2.approve(Router.address, ethers.utils.parseEther("100"));
+    let amountADesired = ethers.utils.parseEther("4");
+    let amountBDesired = ethers.utils.parseEther("1.9");
+    let amountAMin = ethers.utils.parseEther("2");
+    let amountBMin = ethers.utils.parseEther("1.1");
 
-    let amountADesired: BigNumber = ethers.utils.parseEther("2");
-    let amountBDesired: BigNumber = ethers.utils.parseEther("2");
-    let amountAMin: BigNumber = ethers.utils.parseEther("1");
-    let amountBMin: BigNumber = ethers.utils.parseEther("1");
-
-    await expect(
-      Router.addLiquidity(
-        Token1.address,
-        Token2.address,
-        amountADesired,
-        amountBDesired,
-        amountAMin,
-        amountBMin,
-        user.address,
-        1,
-      ),
-    )
-      .to.emit(Router, "Liq")
-      .withArgs(sqrt(amountADesired.mul(amountBDesired)).sub(min_liquidity));
-
-    let _totalSupply = sqrt(amountADesired.mul(amountBDesired));
-
-    amountADesired = ethers.utils.parseEther("4");
-    amountBDesired = ethers.utils.parseEther("1.9");
-    amountAMin = ethers.utils.parseEther("2");
-    amountBMin = ethers.utils.parseEther("1.1");
-
-    let reserveA;
-    let reserveB;
-    [reserveA, reserveB] = await UniswapV2LibraryContract.getReserves(
-      UniswapV2Factory.address,
-      Token1.address,
-      Token2.address,
+    await simulateAddLiquidity(
+      Token1,
+      Token2,
+      UniswapV2LibraryContract,
+      UniswapV2Factory,
+      amountADesired,
+      amountBDesired,
+      amountAMin,
+      amountBMin,
+      _totalSupply,
     );
-    let requiredBAmount = await UniswapV2LibraryContract.quote(amountADesired, reserveA, reserveB); // 4, 2,2
-    let emitedLiq = BigNumber.from("0");
-    if (requiredBAmount <= amountBDesired && requiredBAmount > amountBMin) {
-      emitedLiq =
-        amountADesired.mul(_totalSupply).div(reserveA) < requiredBAmount.mul(_totalSupply).div(reserveB)
-          ? amountADesired.mul(_totalSupply).div(reserveA)
-          : requiredBAmount.mul(_totalSupply).div(reserveB);
-    } else {
-      let requiredAAmount = await UniswapV2LibraryContract.quote(amountBDesired, reserveB, reserveA);
-      if (requiredAAmount <= amountADesired) {
-        if (requiredAAmount >= amountAMin) {
-          let condition: Boolean =
-            requiredAAmount.mul(_totalSupply).div(reserveA) <= amountBDesired.mul(_totalSupply).div(reserveB);
-          emitedLiq = condition
-            ? requiredAAmount.mul(_totalSupply).div(reserveA)
-            : amountBDesired.mul(_totalSupply).div(reserveB);
-        } else {
-          console.log("ELSE2");
-        }
-      } else {
-        console.log("ELSE3");
-      }
-    }
 
     await expect(
       Router.addLiquidity(
@@ -422,74 +248,27 @@ xdescribe("Router tests", function () {
         user.address,
         1,
       ),
-    ).to.be.revertedWith("Insuficient amount");
+    ).to.be.revertedWith("expected amount A < amountAMin");
   });
 
-  it("Add liquidity on existing pair but required B is not in limits and require A > min A, but > desired A dynamic", async () => {
-    await Token1.mint(user.address, ethers.utils.parseEther("10"));
-    await Token2.mint(user.address, ethers.utils.parseEther("10"));
+  it("Add liquidity for second time, with required B not in limits and require A > min A, but > desired A", async () => {
+    let _totalSupply = await addFirstLiquidityTest(Token1, Token2, user, Router);
 
-    await Token1.approve(Router.address, ethers.utils.parseEther("100"));
-    await Token2.approve(Router.address, ethers.utils.parseEther("100"));
-
-    let amountADesired: BigNumber = ethers.utils.parseEther("2");
-    let amountBDesired: BigNumber = ethers.utils.parseEther("2");
-    let amountAMin: BigNumber = ethers.utils.parseEther("1");
-    let amountBMin: BigNumber = ethers.utils.parseEther("1");
-
-    await expect(
-      Router.addLiquidity(
-        Token1.address,
-        Token2.address,
-        amountADesired,
-        amountBDesired,
-        amountAMin,
-        amountBMin,
-        user.address,
-        1,
-      ),
-    )
-      .to.emit(Router, "Liq")
-      .withArgs(sqrt(amountADesired.mul(amountBDesired)).sub(min_liquidity));
-
-    let _totalSupply = sqrt(amountADesired.mul(amountBDesired));
-
-    amountADesired = ethers.utils.parseEther("4");
-    amountBDesired = ethers.utils.parseEther("5");
-    amountAMin = ethers.utils.parseEther("2");
-    amountBMin = ethers.utils.parseEther("4.1");
-
-    let reserveA;
-    let reserveB;
-    [reserveA, reserveB] = await UniswapV2LibraryContract.getReserves(
-      UniswapV2Factory.address,
-      Token1.address,
-      Token2.address,
+    let amountADesired: BigNumber = ethers.utils.parseEther("4");
+    let amountBDesired: BigNumber = ethers.utils.parseEther("5");
+    let amountAMin: BigNumber = ethers.utils.parseEther("2");
+    let amountBMin: BigNumber = ethers.utils.parseEther("4.1");
+    await simulateAddLiquidity(
+      Token1,
+      Token2,
+      UniswapV2LibraryContract,
+      UniswapV2Factory,
+      amountADesired,
+      amountBDesired,
+      amountAMin,
+      amountBMin,
+      _totalSupply,
     );
-    let requiredBAmount = await UniswapV2LibraryContract.quote(amountADesired, reserveA, reserveB);
-    let emitedLiq = BigNumber.from("0");
-    if (requiredBAmount <= amountBDesired && requiredBAmount > amountBMin) {
-      emitedLiq =
-        amountADesired.mul(_totalSupply).div(reserveA) < requiredBAmount.mul(_totalSupply).div(reserveB)
-          ? amountADesired.mul(_totalSupply).div(reserveA)
-          : requiredBAmount.mul(_totalSupply).div(reserveB);
-    } else {
-      let requiredAAmount = await UniswapV2LibraryContract.quote(amountBDesired, reserveB, reserveA);
-      if (requiredAAmount <= amountADesired) {
-        if (requiredAAmount >= amountAMin) {
-          let condition: Boolean =
-            requiredAAmount.mul(_totalSupply).div(reserveA) <= amountBDesired.mul(_totalSupply).div(reserveB);
-          emitedLiq = condition
-            ? requiredAAmount.mul(_totalSupply).div(reserveA)
-            : amountBDesired.mul(_totalSupply).div(reserveB);
-        } else {
-          console.log("ELSE2");
-        }
-      } else {
-        console.log("ELSE3");
-      }
-    }
-
     await expect(
       Router.addLiquidity(
         Token1.address,
@@ -501,83 +280,32 @@ xdescribe("Router tests", function () {
         user.address,
         1,
       ),
-    ).to.be.revertedWith("Insuficient amount2");
+    ).to.be.revertedWith("expected amount A > amountADesired");
   });
 
   it("Add liquidity with eth first time", async () => {
-    await Token1.mint(user.address, ethers.utils.parseEther("10"));
-
-    await Token1.approve(Router.address, ethers.utils.parseEther("100"));
-
-    let amountTokenDesired: BigNumber = ethers.utils.parseEther("2");
-    let amountEth: BigNumber = ethers.utils.parseEther("2");
-    let amountTokenMin: BigNumber = ethers.utils.parseEther("1");
-    let amountEthMin: BigNumber = ethers.utils.parseEther("1");
-
-    await expect(
-      Router.addLiquidityETH(Token1.address, amountTokenDesired, amountTokenMin, amountEthMin, user.address, 1, {
-        value: amountEth,
-      }),
-    )
-      .to.emit(Router, "LiqETH")
-      .withArgs(sqrt(amountTokenDesired.mul(amountEth)).sub(min_liquidity));
+    await addFirstLiquidityETHTest(Token1, user, Router);
   });
 
-  it("Add liquidity eth on existing pair dynamic", async () => {
-    await Token1.mint(user.address, ethers.utils.parseEther("10"));
+  it("Add liquidity eth for second time", async () => {
+    let _totalSupply = await addFirstLiquidityETHTest(Token1, user, Router);
 
-    await Token1.approve(Router.address, ethers.utils.parseEther("100"));
-
-    let amountTokenDesired: BigNumber = ethers.utils.parseEther("2");
+    let amountTokenDesired: BigNumber = ethers.utils.parseEther("4");
     let amountEth: BigNumber = ethers.utils.parseEther("2");
-    let amountTokenMin: BigNumber = ethers.utils.parseEther("1");
-    let amountEthMin: BigNumber = ethers.utils.parseEther("1");
+    let amountTokenMin: BigNumber = ethers.utils.parseEther("2");
+    let amountEthMin: BigNumber = ethers.utils.parseEther("1.1");
 
-    await expect(
-      Router.addLiquidityETH(Token1.address, amountTokenDesired, amountTokenMin, amountEthMin, user.address, 1, {
-        value: amountEth,
-      }),
-    )
-      .to.emit(Router, "LiqETH")
-      .withArgs(sqrt(amountTokenDesired.mul(amountEth)).sub(min_liquidity));
-
-    let _totalSupply = sqrt(amountTokenDesired.mul(amountEth));
-
-    amountTokenDesired = ethers.utils.parseEther("4");
-    amountEth = ethers.utils.parseEther("2");
-    amountTokenMin = ethers.utils.parseEther("2");
-    amountEthMin = ethers.utils.parseEther("1.1");
-
-    let reserveA;
-    let reserveB;
-    [reserveA, reserveB] = await UniswapV2LibraryContract.getReserves(
-      UniswapV2Factory.address,
-      Token1.address,
-      WETH.address,
+    let liquidity: BigNumber = await simulateAddLiquidity(
+      Token1,
+      WETH,
+      UniswapV2LibraryContract,
+      UniswapV2Factory,
+      amountTokenDesired,
+      amountEth,
+      amountTokenMin,
+      amountEthMin,
+      _totalSupply,
     );
-    let requiredBAmount = await UniswapV2LibraryContract.quote(amountTokenDesired, reserveA, reserveB);
-    let emitedLiq = BigNumber.from("0");
-    if (requiredBAmount <= amountEth && requiredBAmount > amountEthMin) {
-      emitedLiq =
-        amountTokenDesired.mul(_totalSupply).div(reserveA) < requiredBAmount.mul(_totalSupply).div(reserveB)
-          ? amountTokenDesired.mul(_totalSupply).div(reserveA)
-          : requiredBAmount.mul(_totalSupply).div(reserveB);
-    } else {
-      let requiredAAmount = await UniswapV2LibraryContract.quote(amountEth, reserveB, reserveA);
-      if (requiredAAmount <= amountTokenDesired) {
-        if (requiredAAmount >= amountTokenMin) {
-          let condition: Boolean =
-            requiredAAmount.mul(_totalSupply).div(reserveA) <= amountEth.mul(_totalSupply).div(reserveB);
-          emitedLiq = condition
-            ? requiredAAmount.mul(_totalSupply).div(reserveA)
-            : amountEth.mul(_totalSupply).div(reserveB);
-        } else {
-          console.log("ELSE2");
-        }
-      } else {
-        console.log("ELSE3");
-      }
-    }
 
     await expect(
       Router.addLiquidityETH(Token1.address, amountTokenDesired, amountTokenMin, amountEthMin, user.address, 1, {
@@ -585,194 +313,83 @@ xdescribe("Router tests", function () {
       }),
     )
       .to.emit(Router, "LiqETH")
-      .withArgs(emitedLiq);
+      .withArgs(liquidity);
   });
 
-  it("Add liquidity eth but required token is not in limits and require eth > desired eth dynamic -", async () => {
-    await Token1.mint(user.address, ethers.utils.parseEther("10"));
+  it("Add liquidity eth but required token is not in limits and require eth > desired eth", async () => {
+    // A - token
+    let _totalSupply = await addFirstLiquidityETHTest(Token1, user, Router);
 
-    await Token1.approve(Router.address, ethers.utils.parseEther("100"));
+    let amountTokenDesired: BigNumber = ethers.utils.parseEther("4");
+    let amountEth: BigNumber = ethers.utils.parseEther("1.9");
+    let amountTokenMin: BigNumber = ethers.utils.parseEther("2");
+    let amountEthMin: BigNumber = ethers.utils.parseEther("1.1");
 
-    let amountTokenDesired: BigNumber = ethers.utils.parseEther("2");
-    let amountEth: BigNumber = ethers.utils.parseEther("2.5");
-    let amountTokenMin: BigNumber = ethers.utils.parseEther("1");
-    let amountEthMin: BigNumber = ethers.utils.parseEther("1");
-
-    await expect(
-      Router.addLiquidityETH(Token1.address, amountTokenDesired, amountTokenMin, amountEthMin, user.address, 1, {
-        value: amountEth,
-      }),
-    )
-      .to.emit(Router, "LiqETH")
-      .withArgs(sqrt(amountTokenDesired.mul(amountEth)).sub(min_liquidity));
-
-    let _totalSupply = sqrt(amountTokenDesired.mul(amountEth));
-
-    amountTokenDesired = ethers.utils.parseEther("4");
-    amountEth = ethers.utils.parseEther("1.9");
-    amountTokenMin = ethers.utils.parseEther("2");
-    amountEthMin = ethers.utils.parseEther("1.1");
-
-    let reserveA;
-    let reserveB;
-    [reserveA, reserveB] = await UniswapV2LibraryContract.getReserves(
-      UniswapV2Factory.address,
-      Token1.address,
-      WETH.address,
+    await simulateAddLiquidity(
+      Token1,
+      WETH,
+      UniswapV2LibraryContract,
+      UniswapV2Factory,
+      amountTokenDesired,
+      amountEth,
+      amountTokenMin,
+      amountEthMin,
+      _totalSupply,
     );
-    let requiredBAmount = await UniswapV2LibraryContract.quote(amountTokenDesired, reserveA, reserveB);
-    let emitedLiq = BigNumber.from("0");
-    if (requiredBAmount <= amountEth && requiredBAmount > amountEthMin) {
-      emitedLiq =
-        amountTokenDesired.mul(_totalSupply).div(reserveA) < requiredBAmount.mul(_totalSupply).div(reserveB)
-          ? amountTokenDesired.mul(_totalSupply).div(reserveA)
-          : requiredBAmount.mul(_totalSupply).div(reserveB);
-    } else {
-      let requiredAAmount = await UniswapV2LibraryContract.quote(amountEth, reserveB, reserveA);
-      if (requiredAAmount <= amountTokenDesired) {
-        if (requiredAAmount >= amountTokenMin) {
-          let condition: Boolean =
-            requiredAAmount.mul(_totalSupply).div(reserveA) <= amountEth.mul(_totalSupply).div(reserveB);
-          emitedLiq = condition
-            ? requiredAAmount.mul(_totalSupply).div(reserveA)
-            : amountEth.mul(_totalSupply).div(reserveB);
-        } else {
-          console.log("ELSE2");
-        }
-      } else {
-        console.log("ELSE3");
-      }
-    }
 
     await expect(
       Router.addLiquidityETH(Token1.address, amountTokenDesired, amountTokenMin, amountEthMin, user.address, 1, {
         value: amountEth,
       }),
-    ).to.be.revertedWith("Insuficient eth2");
+    ).to.be.revertedWith("expected amount A < amountAMin");
   });
 
   it("Add liquidity eth but required token is not in limits and require eth < min eth dynamic -", async () => {
-    await Token1.mint(user.address, ethers.utils.parseEther("10"));
+    let _totalSupply = await addFirstLiquidityETHTest(Token1, user, Router);
 
-    await Token1.approve(Router.address, ethers.utils.parseEther("100"));
+    let amountTokenDesired: BigNumber = ethers.utils.parseEther("4");
+    let amountEth: BigNumber = ethers.utils.parseEther("5");
+    let amountTokenMin: BigNumber = ethers.utils.parseEther("2");
+    let amountEthMin: BigNumber = ethers.utils.parseEther("4.1");
 
-    let amountTokenDesired: BigNumber = ethers.utils.parseEther("2");
-    let amountEth: BigNumber = ethers.utils.parseEther("2");
-    let amountTokenMin: BigNumber = ethers.utils.parseEther("1");
-    let amountEthMin: BigNumber = ethers.utils.parseEther("1");
-
-    await expect(
-      Router.addLiquidityETH(Token1.address, amountTokenDesired, amountTokenMin, amountEthMin, user.address, 1, {
-        value: amountEth,
-      }),
-    )
-      .to.emit(Router, "LiqETH")
-      .withArgs(sqrt(amountTokenDesired.mul(amountEth)).sub(min_liquidity));
-
-    let _totalSupply = sqrt(amountTokenDesired.mul(amountEth));
-
-    amountTokenDesired = ethers.utils.parseEther("4");
-    amountEth = ethers.utils.parseEther("5");
-    amountTokenMin = ethers.utils.parseEther("2");
-    amountEthMin = ethers.utils.parseEther("4.1");
-
-    let reserveA;
-    let reserveB;
-    [reserveA, reserveB] = await UniswapV2LibraryContract.getReserves(
-      UniswapV2Factory.address,
-      Token1.address,
-      WETH.address,
+    await simulateAddLiquidity(
+      Token1,
+      WETH,
+      UniswapV2LibraryContract,
+      UniswapV2Factory,
+      amountTokenDesired,
+      amountEth,
+      amountTokenMin,
+      amountEthMin,
+      _totalSupply,
     );
-    console.log("RESERVE");
-    console.log(reserveA);
-    console.log(reserveB);
-    let requiredBAmount = await UniswapV2LibraryContract.quote(amountTokenDesired, reserveA, reserveB);
-    let emitedLiq = BigNumber.from("0");
-    if (requiredBAmount <= amountEth && requiredBAmount > amountEthMin) {
-      emitedLiq =
-        amountTokenDesired.mul(_totalSupply).div(reserveA) < requiredBAmount.mul(_totalSupply).div(reserveB)
-          ? amountTokenDesired.mul(_totalSupply).div(reserveA)
-          : requiredBAmount.mul(_totalSupply).div(reserveB);
-    } else {
-      let requiredAAmount = await UniswapV2LibraryContract.quote(amountEth, reserveB, reserveA);
-      if (requiredAAmount <= amountTokenDesired) {
-        if (requiredAAmount >= amountTokenMin) {
-          let condition: Boolean =
-            requiredAAmount.mul(_totalSupply).div(reserveA) <= amountEth.mul(_totalSupply).div(reserveB);
-          emitedLiq = condition
-            ? requiredAAmount.mul(_totalSupply).div(reserveA)
-            : amountEth.mul(_totalSupply).div(reserveB);
-        } else {
-          console.log("ELSE2");
-        }
-      } else {
-        console.log("ELSE3");
-      }
-    }
 
     await expect(
       Router.addLiquidityETH(Token1.address, amountTokenDesired, amountTokenMin, amountEthMin, user.address, 1, {
         value: amountEth,
       }),
-    ).to.be.revertedWith("Insuficient eth");
+    ).to.be.revertedWith("expected amount A > amountADesired");
   });
 
   it("Add liquidity eth but required token is not in limits but emount eth is", async () => {
-    await Token1.mint(user.address, ethers.utils.parseEther("10"));
+    let _totalSupply = await addFirstLiquidityETHTest(Token1, user, Router);
 
-    await Token1.approve(Router.address, ethers.utils.parseEther("100"));
+    let amountTokenDesired: BigNumber = ethers.utils.parseEther("4");
+    let amountEth: BigNumber = ethers.utils.parseEther("5");
+    let amountTokenMin: BigNumber = ethers.utils.parseEther("2");
+    let amountEthMin: BigNumber = ethers.utils.parseEther("1.1");
 
-    let amountTokenDesired: BigNumber = ethers.utils.parseEther("2");
-    let amountEth: BigNumber = ethers.utils.parseEther("2");
-    let amountTokenMin: BigNumber = ethers.utils.parseEther("1");
-    let amountEthMin: BigNumber = ethers.utils.parseEther("1");
-
-    await expect(
-      Router.addLiquidityETH(Token1.address, amountTokenDesired, amountTokenMin, amountEthMin, user.address, 1, {
-        value: amountEth,
-      }),
-    )
-      .to.emit(Router, "LiqETH")
-      .withArgs(sqrt(amountTokenDesired.mul(amountEth)).sub(min_liquidity));
-
-    let _totalSupply = sqrt(amountTokenDesired.mul(amountEth));
-
-    amountTokenDesired = ethers.utils.parseEther("4");
-    amountEth = ethers.utils.parseEther("5");
-    amountTokenMin = ethers.utils.parseEther("2");
-    amountEthMin = ethers.utils.parseEther("1.1");
-
-    let reserveA;
-    let reserveB;
-    [reserveA, reserveB] = await UniswapV2LibraryContract.getReserves(
-      UniswapV2Factory.address,
-      Token1.address,
-      WETH.address,
+    let liquidity: BigNumber = await simulateAddLiquidity(
+      Token1,
+      WETH,
+      UniswapV2LibraryContract,
+      UniswapV2Factory,
+      amountTokenDesired,
+      amountEth,
+      amountTokenMin,
+      amountEthMin,
+      _totalSupply,
     );
-    let requiredBAmount = await UniswapV2LibraryContract.quote(amountTokenDesired, reserveA, reserveB);
-    let emitedLiq = BigNumber.from("0");
-    if (requiredBAmount <= amountEth && requiredBAmount > amountEthMin) {
-      console.log("IF");
-      emitedLiq =
-        amountTokenDesired.mul(_totalSupply).div(reserveA) < requiredBAmount.mul(_totalSupply).div(reserveB)
-          ? amountTokenDesired.mul(_totalSupply).div(reserveA)
-          : requiredBAmount.mul(_totalSupply).div(reserveB);
-    } else {
-      let requiredAAmount = await UniswapV2LibraryContract.quote(amountEth, reserveB, reserveA);
-      if (requiredAAmount <= amountTokenDesired) {
-        if (requiredAAmount >= amountTokenMin) {
-          let condition: Boolean =
-            requiredAAmount.mul(_totalSupply).div(reserveA) <= amountEth.mul(_totalSupply).div(reserveB);
-          emitedLiq = condition
-            ? requiredAAmount.mul(_totalSupply).div(reserveA)
-            : amountEth.mul(_totalSupply).div(reserveB);
-        } else {
-          console.log("ELSE2");
-        }
-      } else {
-        console.log("ELSE3");
-      }
-    }
 
     await expect(
       Router.addLiquidityETH(Token1.address, amountTokenDesired, amountTokenMin, amountEthMin, user.address, 1, {
@@ -780,7 +397,7 @@ xdescribe("Router tests", function () {
       }),
     )
       .to.emit(Router, "LiqETH")
-      .withArgs(emitedLiq);
+      .withArgs(liquidity);
   });
 
   it("remove liq", async () => {
@@ -825,32 +442,17 @@ xdescribe("Router tests", function () {
     amountAMin = ethers.utils.parseEther("2");
     amountBMin = ethers.utils.parseEther("1.1");
 
-    let reserveA;
-    let reserveB;
-    [reserveA, reserveB] = await UniswapV2LibraryContract.getReserves(
-      UniswapV2Factory.address,
-      Token1.address,
-      Token2.address,
+    let liquidity: BigNumber = await simulateAddLiquidity(
+      Token1,
+      Token2,
+      UniswapV2LibraryContract,
+      UniswapV2Factory,
+      amountADesired,
+      amountBDesired,
+      amountAMin,
+      amountBMin,
+      _totalSupply,
     );
-
-    let requiredBAmount = await UniswapV2LibraryContract.quote(amountADesired, reserveA, reserveB);
-    let emitedLiq = BigNumber.from("0");
-    if (requiredBAmount <= amountBDesired && requiredBAmount > amountBMin) {
-      emitedLiq =
-        amountADesired.mul(_totalSupply).div(reserveA) < requiredBAmount.mul(_totalSupply).div(reserveB)
-          ? amountADesired.mul(_totalSupply).div(reserveA)
-          : requiredBAmount.mul(_totalSupply).div(reserveB);
-    } else {
-      let requiredAAmount = await UniswapV2LibraryContract.quote(amountBDesired, reserveB, reserveA);
-      if (requiredAAmount <= amountADesired) {
-        if (requiredAAmount >= amountAMin) {
-          emitedLiq =
-            requiredAAmount.mul(_totalSupply).div(reserveA) < amountBDesired.mul(_totalSupply).div(reserveB)
-              ? requiredAAmount.mul(_totalSupply).div(reserveA)
-              : amountBDesired.mul(_totalSupply).div(reserveB);
-        }
-      }
-    }
 
     await expect(
       Router.addLiquidity(
@@ -865,7 +467,7 @@ xdescribe("Router tests", function () {
       ),
     )
       .to.emit(Router, "Liq")
-      .withArgs(emitedLiq);
+      .withArgs(liquidity);
 
     // remove it
     await expect(
@@ -924,32 +526,17 @@ xdescribe("Router tests", function () {
     amountAMin = ethers.utils.parseEther("2");
     amountBMin = ethers.utils.parseEther("1.1");
 
-    let reserveA;
-    let reserveB;
-    [reserveA, reserveB] = await UniswapV2LibraryContract.getReserves(
-      UniswapV2Factory.address,
-      Token1.address,
-      Token2.address,
+    let liquidity: BigNumber = await simulateAddLiquidity(
+      Token1,
+      Token2,
+      UniswapV2LibraryContract,
+      UniswapV2Factory,
+      amountADesired,
+      amountBDesired,
+      amountAMin,
+      amountBMin,
+      _totalSupply,
     );
-
-    let requiredBAmount = await UniswapV2LibraryContract.quote(amountADesired, reserveA, reserveB);
-    let emitedLiq = BigNumber.from("0");
-    if (requiredBAmount <= amountBDesired && requiredBAmount > amountBMin) {
-      emitedLiq =
-        amountADesired.mul(_totalSupply).div(reserveA) < requiredBAmount.mul(_totalSupply).div(reserveB)
-          ? amountADesired.mul(_totalSupply).div(reserveA)
-          : requiredBAmount.mul(_totalSupply).div(reserveB);
-    } else {
-      let requiredAAmount = await UniswapV2LibraryContract.quote(amountBDesired, reserveB, reserveA);
-      if (requiredAAmount <= amountADesired) {
-        if (requiredAAmount >= amountAMin) {
-          emitedLiq =
-            requiredAAmount.mul(_totalSupply).div(reserveA) < amountBDesired.mul(_totalSupply).div(reserveB)
-              ? requiredAAmount.mul(_totalSupply).div(reserveA)
-              : amountBDesired.mul(_totalSupply).div(reserveB);
-        }
-      }
-    }
 
     await expect(
       Router.addLiquidity(
@@ -964,7 +551,7 @@ xdescribe("Router tests", function () {
       ),
     )
       .to.emit(Router, "Liq")
-      .withArgs(emitedLiq);
+      .withArgs(liquidity);
 
     // remove it
     await expect(
@@ -978,7 +565,7 @@ xdescribe("Router tests", function () {
         user.address,
         1,
       ),
-    ).to.be.revertedWith("Insuficient amount");
+    ).to.be.revertedWith("Amount of first token is less than expected");
   });
 
   it("remove liq with second min token amount to big", async () => {
@@ -1023,33 +610,17 @@ xdescribe("Router tests", function () {
     amountAMin = ethers.utils.parseEther("2");
     amountBMin = ethers.utils.parseEther("1.1");
 
-    let reserveA;
-    let reserveB;
-    [reserveA, reserveB] = await UniswapV2LibraryContract.getReserves(
-      UniswapV2Factory.address,
-      Token1.address,
-      Token2.address,
+    let liquidity: BigNumber = await simulateAddLiquidity(
+      Token1,
+      Token2,
+      UniswapV2LibraryContract,
+      UniswapV2Factory,
+      amountADesired,
+      amountBDesired,
+      amountAMin,
+      amountBMin,
+      _totalSupply,
     );
-
-    let requiredBAmount = await UniswapV2LibraryContract.quote(amountADesired, reserveA, reserveB);
-    let emitedLiq = BigNumber.from("0");
-    if (requiredBAmount <= amountBDesired && requiredBAmount > amountBMin) {
-      emitedLiq =
-        amountADesired.mul(_totalSupply).div(reserveA) < requiredBAmount.mul(_totalSupply).div(reserveB)
-          ? amountADesired.mul(_totalSupply).div(reserveA)
-          : requiredBAmount.mul(_totalSupply).div(reserveB);
-    } else {
-      let requiredAAmount = await UniswapV2LibraryContract.quote(amountBDesired, reserveB, reserveA);
-      if (requiredAAmount <= amountADesired) {
-        if (requiredAAmount >= amountAMin) {
-          emitedLiq =
-            requiredAAmount.mul(_totalSupply).div(reserveA) < amountBDesired.mul(_totalSupply).div(reserveB)
-              ? requiredAAmount.mul(_totalSupply).div(reserveA)
-              : amountBDesired.mul(_totalSupply).div(reserveB);
-        }
-      }
-    }
-
     await expect(
       Router.addLiquidity(
         Token1.address,
@@ -1063,7 +634,7 @@ xdescribe("Router tests", function () {
       ),
     )
       .to.emit(Router, "Liq")
-      .withArgs(emitedLiq);
+      .withArgs(liquidity);
 
     // remove it
     await expect(
@@ -1077,7 +648,7 @@ xdescribe("Router tests", function () {
         user.address,
         1,
       ),
-    ).to.be.revertedWith("Insuficient amount2");
+    ).to.be.revertedWith("Amount of second token is less than expected");
   });
 
   //////////////////////////////////////////////////////////////////////////////////////////////
@@ -1129,7 +700,7 @@ xdescribe("Router tests", function () {
     ).to.emit(Router, "RemoveLiquidityETH");
   });
 
-  it("remove liq eth 2", async () => {
+  it("remove liq eth, but resulted token amount is lower then minimum expected", async () => {
     // add liq
     await Token1.mint(user.address, ethers.utils.parseEther("10"));
 
@@ -1173,10 +744,10 @@ xdescribe("Router tests", function () {
         user.address,
         1,
       ),
-    ).to.be.revertedWith("Insuficient amount");
+    ).to.be.revertedWith("Amount of token is less than expected");
   });
 
-  it("remove liq eth 3 with second min token amount to big", async () => {
+  it("remove liq eth with resulted eth amount lower than minimum expected ", async () => {
     // add liq
     await Token1.mint(user.address, ethers.utils.parseEther("10"));
 
@@ -1220,7 +791,7 @@ xdescribe("Router tests", function () {
         user.address,
         1,
       ),
-    ).to.be.revertedWith("Insuficient amount2");
+    ).to.be.revertedWith("Eth amount is less than expected");
   });
 
   //////////////////////////////////////////////////////////////////////////////////
@@ -1271,7 +842,7 @@ xdescribe("Router tests", function () {
     let path = [Token1.address, Token2.address, Token3.address, Token4.address];
     let amounts: BigNumber[] = await UniswapV2LibraryContract.getAmountsOut(UniswapV2Factory.address, amountIn, path);
     await expect(Router.swapExactTokensForTokens(amountIn, amountOutMin, path, user.address, 1)).to.be.revertedWith(
-      "Insufficient amount",
+      "Output amount is less than the minimum amount",
     );
   });
 
@@ -1440,7 +1011,7 @@ xdescribe("Router tests", function () {
 
     await expect(
       Router.swapExactETHForTokens(amountOutMin, path, user.address, 1, { value: amountIn }),
-    ).to.be.revertedWith("Insufficient amount");
+    ).to.be.revertedWith("Output amount is less than the minimum amount");
   });
 
   it("swapExactETHForTokens no liq on output pair", async () => {
@@ -1538,7 +1109,7 @@ xdescribe("Router tests", function () {
     let path = [Token1.address, Token2.address, Token3.address, Token4.address];
     // let amounts: BigNumber[] = await UniswapV2LibraryContract.getAmountsIn(UniswapV2Factory.address, amountOut, path);
     await expect(Router.swapTokensForExactTokens(amountOut, amountInMax, path, user.address, 1)).to.be.revertedWith(
-      "Insufficient amount",
+      "Input amount is greater than the maximum amount",
     );
   });
 
@@ -1614,7 +1185,7 @@ xdescribe("Router tests", function () {
     let amountOut = ethers.utils.parseEther("0.1");
     let path = [Token1.address, Token2.address, Token3.address];
     await expect(Router.swapTokensForExactETH(amountOut, amountInMax, path, user.address, 1)).to.be.revertedWith(
-      "Last pair have to be WETH",
+      "Last address have to be WETH",
     );
   });
 
@@ -1776,7 +1347,7 @@ xdescribe("Router tests", function () {
     let amountOutMin = ethers.utils.parseEther("0");
     let path = [Token1.address, Token2.address, Token3.address];
     await expect(Router.swapExactTokensForETH(amountIn, amountOutMin, path, user.address, 1)).to.be.revertedWith(
-      "Incorrect path",
+      "Last address have to be WETH",
     );
   });
 
@@ -1881,7 +1452,7 @@ xdescribe("Router tests", function () {
     let path = [Token1.address, Token2.address, Token3.address, Token4.address];
     await expect(
       Router.swapETHForExactTokens(amountOut, path, user.address, 1, { value: amountInMax }),
-    ).to.be.revertedWith("Incorrect path");
+    ).to.be.revertedWith("First address in path have to be WETH");
   });
 
   it("swapETHForExactTokens where first pair is not WETH", async () => {
@@ -1957,7 +1528,7 @@ async function createPairsAndAddLiquidity(
   Token4: Token,
   user: SignerWithAddress,
   UniswapV2FactoryContract: UniswapV2Factory,
-  Router: BogdanRouterV2,
+  Router: BogdanRouterV3,
   pair1: boolean,
   pair2: boolean,
   pair3: boolean,
@@ -2053,4 +1624,107 @@ async function createPairsAndAddLiquidity(
         );
     }
   }
+}
+
+async function addFirstLiquidityTest(
+  Token1: Token,
+  Token2: Token,
+  user: SignerWithAddress,
+  Router: BogdanRouterV3,
+): Promise<BigNumber> {
+  let min_liquidity: BigNumber = BigNumber.from("1000");
+  await Token1.mint(user.address, ethers.utils.parseEther("10"));
+  await Token2.mint(user.address, ethers.utils.parseEther("10"));
+
+  await Token1.approve(Router.address, ethers.utils.parseEther("100"));
+  await Token2.approve(Router.address, ethers.utils.parseEther("100"));
+
+  let amountADesired: BigNumber = ethers.utils.parseEther("2");
+  let amountBDesired: BigNumber = ethers.utils.parseEther("2");
+  let amountAMin: BigNumber = ethers.utils.parseEther("1");
+  let amountBMin: BigNumber = ethers.utils.parseEther("1");
+
+  await expect(
+    Router.addLiquidity(
+      Token1.address,
+      Token2.address,
+      amountADesired,
+      amountBDesired,
+      amountAMin,
+      amountBMin,
+      user.address,
+      1,
+    ),
+  )
+    .to.emit(Router, "Liq")
+    .withArgs(sqrt(amountADesired.mul(amountBDesired)).sub(min_liquidity));
+
+  let _totalSupply = sqrt(amountADesired.mul(amountBDesired));
+  return _totalSupply;
+}
+async function addFirstLiquidityETHTest(
+  Token1: Token,
+  user: SignerWithAddress,
+  Router: BogdanRouterV3,
+): Promise<BigNumber> {
+  let min_liquidity: BigNumber = BigNumber.from("1000");
+  await Token1.mint(user.address, ethers.utils.parseEther("10"));
+
+  await Token1.approve(Router.address, ethers.utils.parseEther("100"));
+
+  let amountTokenDesired: BigNumber = ethers.utils.parseEther("2");
+  let amountEth: BigNumber = ethers.utils.parseEther("2");
+  let amountTokenMin: BigNumber = ethers.utils.parseEther("1");
+  let amountEthMin: BigNumber = ethers.utils.parseEther("1");
+
+  await expect(
+    Router.addLiquidityETH(Token1.address, amountTokenDesired, amountTokenMin, amountEthMin, user.address, 1, {
+      value: amountEth,
+    }),
+  )
+    .to.emit(Router, "LiqETH")
+    .withArgs(sqrt(amountTokenDesired.mul(amountEth)).sub(min_liquidity));
+
+  let _totalSupply = sqrt(amountTokenDesired.mul(amountEth));
+  return _totalSupply;
+}
+
+async function simulateAddLiquidity(
+  Token1: Token,
+  Token2: Token | WETH9,
+  UniswapV2LibraryContract: UniswapV2LibraryMock,
+  UniswapV2Factory: UniswapV2Factory,
+  amountADesired: BigNumber,
+  amountBDesired: BigNumber,
+  amountAMin: BigNumber,
+  amountBMin: BigNumber,
+  _totalSupply: BigNumber,
+): Promise<BigNumber> {
+  let reserveA;
+  let reserveB;
+  [reserveA, reserveB] = await UniswapV2LibraryContract.getReserves(
+    UniswapV2Factory.address,
+    Token1.address,
+    Token2.address,
+  );
+  let requiredBAmount = await UniswapV2LibraryContract.quote(amountADesired, reserveA, reserveB);
+  let emitedLiq = BigNumber.from("0");
+  if (requiredBAmount <= amountBDesired && requiredBAmount > amountBMin) {
+    emitedLiq =
+      amountADesired.mul(_totalSupply).div(reserveA) < requiredBAmount.mul(_totalSupply).div(reserveB)
+        ? amountADesired.mul(_totalSupply).div(reserveA)
+        : requiredBAmount.mul(_totalSupply).div(reserveB);
+  } else {
+    let requiredAAmount = await UniswapV2LibraryContract.quote(amountBDesired, reserveB, reserveA);
+    if (requiredAAmount <= amountADesired) {
+      if (requiredAAmount >= amountAMin) {
+        let condition: Boolean =
+          requiredAAmount.mul(_totalSupply).div(reserveA) <= amountBDesired.mul(_totalSupply).div(reserveB);
+        emitedLiq = condition
+          ? requiredAAmount.mul(_totalSupply).div(reserveA)
+          : amountBDesired.mul(_totalSupply).div(reserveB);
+      }
+    }
+  }
+  return emitedLiq;
 }

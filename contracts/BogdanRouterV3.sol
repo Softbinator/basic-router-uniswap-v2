@@ -30,9 +30,6 @@ contract BogdanRouterV3 is IUniswapV2Router02 {
     /// @notice Event triggered when liquidity is added as a token and eth
     event LiqETH(uint256);
 
-    /// @notice Event triggered when liquidity is added as a token and eth
-    event Liquidity(uint256);
-
     /// @notice Event triggered when liquidity is removed from a token-token pair
     event RemoveLiquidity(address, uint256, uint256);
 
@@ -60,6 +57,52 @@ contract BogdanRouterV3 is IUniswapV2Router02 {
     constructor(address _factory, address _WETH) public {
         factory = _factory;
         WETH = _WETH;
+    }
+
+    /**
+     * @notice Function that calculates the amount needed for adding liquidity
+     * @param tokenA represents the address of the first token
+     * @param tokenB represents the address of the second token
+     * @param amountADesired represents the amount of first token to be deposited
+     * @param amountBDesired represents the amount of second token to be deposited
+     * @param amountAMin represents the minimum amount of the first token to be deposited
+     * @param amountBMin represents the minimum amount of the first token to be deposited
+     * @param to represents address that will receive the liquidity tokens
+     */
+    function _addLiquidity(
+        address tokenA,
+        address tokenB,
+        uint256 amountADesired,
+        uint256 amountBDesired,
+        uint256 amountAMin,
+        uint256 amountBMin,
+        address to
+    ) internal returns (uint256 amountA, uint256 amountB) {
+        if (IUniswapV2Factory(factory).getPair(tokenA, tokenB) == address(0)) {
+            IUniswapV2Factory(factory).createPair(tokenA, tokenB);
+        }
+
+        (uint256 reserveA, uint256 reserveB) = UniswapV2Library.getReserves(factory, tokenA, tokenB);
+
+        /// @dev if the reserves are 0, then the pool wasn't initialize and there is no rate between the 2 tokens
+        /// @dev so the user can deposit any amount
+        if (reserveA == 0 && reserveB == 0) {
+            (amountA, amountB) = (amountADesired, amountBDesired);
+        } else {
+            /// @dev if the reserves are != 0, then we need to check the rate of the tokens
+
+            /// @dev quote function returns us the echivalent amount of a token in another token depending on reserves
+            uint256 expectedAmountB = UniswapV2Library.quote(amountADesired, reserveA, reserveB);
+
+            if (expectedAmountB < amountBMin || expectedAmountB > amountBDesired) {
+                uint256 expectedAmountA = UniswapV2Library.quote(amountBDesired, reserveB, reserveA);
+                require(expectedAmountA >= amountAMin, "expected amount A < amountAMin");
+                require(expectedAmountA <= amountADesired, "expected amount A > amountADesired");
+                (amountA, amountB) = (expectedAmountA, amountBDesired);
+            } else {
+                (amountA, amountB) = (amountADesired, expectedAmountB);
+            }
+        }
     }
 
     /**
@@ -92,35 +135,15 @@ contract BogdanRouterV3 is IUniswapV2Router02 {
             uint256 liquidity
         )
     {
-        /// @dev check if the pair exists, else create it
-        address pair = IUniswapV2Factory(factory).getPair(tokenA, tokenB);
-        if (pair == address(0)) {
-            pair = IUniswapV2Factory(factory).createPair(tokenA, tokenB);
-        }
+        (amountA, amountB) = _addLiquidity(tokenA, tokenB, amountADesired, amountBDesired, amountAMin, amountBMin, to);
+
+        address pair = UniswapV2Library.pairFor(factory, tokenA, tokenB);
 
         (uint256 reserveA, uint256 reserveB) = UniswapV2Library.getReserves(factory, tokenA, tokenB);
-        /// @dev if the reserves are 0, then the pool wasn't initialize and there is no rate between the 2 tokens
-        /// @dev so the user can deposit any amount
-        if (reserveA == 0 && reserveB == 0) {
-            TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountADesired);
-            TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountBDesired);
-        } else {
-            /// @dev if the reserves are != 0, then we need to check the rate of the tokens
 
-            /// @dev quote function returns us the echivalent amount of a token in another token depending on reserves
-            amountB = UniswapV2Library.quote(amountADesired, reserveA, reserveB);
+        TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA);
+        TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB);
 
-            if (amountB < amountBMin || amountB > amountBDesired) {
-                amountA = UniswapV2Library.quote(amountBDesired, reserveB, reserveA);
-                require(amountA >= amountAMin, "Insuficient amount");
-                require(amountA <= amountADesired, "Insuficient amount2");
-                TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA);
-                TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountBDesired);
-            } else {
-                TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountADesired);
-                TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB);
-            }
-        }
         liquidity = IUniswapV2Pair(pair).mint(to);
         emit Liq(liquidity);
     }
@@ -152,46 +175,26 @@ contract BogdanRouterV3 is IUniswapV2Router02 {
             uint256 liquidity
         )
     {
-        /// @dev check if the pair exists, else create it
-        if (IUniswapV2Factory(factory).getPair(token, WETH) == address(0)) {
-            IUniswapV2Factory(factory).createPair(token, WETH);
-        }
-
-        /// @dev get the pair by using this function from the library.
-        /// @dev with the help of create2 now the addresses of contracts can be determined using certain factors
+        (amountToken, amountETH) = _addLiquidity(
+            token,
+            WETH,
+            amountTokenDesired,
+            msg.value,
+            amountTokenMin,
+            amountETHMin,
+            to
+        );
         address pair = UniswapV2Library.pairFor(factory, token, WETH);
 
-        (uint256 reserveToken, uint256 reserveEth) = UniswapV2Library.getReserves(factory, token, WETH);
+        TransferHelper.safeTransferFrom(token, msg.sender, pair, amountToken);
 
-        if (reserveToken == 0 && reserveEth == 0) {
-            TransferHelper.safeTransferFrom(token, msg.sender, pair, amountTokenDesired);
+        /// @dev convert eth to WETH
+        IWETH(WETH).deposit{ value: amountETH }();
+        IWETH(WETH).transfer(pair, amountETH);
 
-            /// @dev convert eth to WETH
-            IWETH(WETH).deposit{ value: msg.value }();
-            IWETH(WETH).transfer(pair, msg.value);
-        } else {
-            amountToken = UniswapV2Library.quote(msg.value, reserveEth, reserveToken);
-            if (amountToken < amountTokenMin || amountToken > amountTokenDesired) {
-                amountETH = UniswapV2Library.quote(amountTokenDesired, reserveToken, reserveEth);
-                require(amountETH >= amountETHMin, "Insuficient eth");
-                require(amountETH <= msg.value, "Insuficient eth2");
-                TransferHelper.safeTransferFrom(token, msg.sender, pair, amountTokenDesired);
-
-                /// @dev convert eth to WETH
-                IWETH(WETH).deposit{ value: amountETH }();
-                IWETH(WETH).transfer(pair, amountETH);
-
-                /// @dev send back remaining eth
-                if (amountETH < msg.value) {
-                    TransferHelper.safeTransferETH(msg.sender, msg.value - amountETH);
-                }
-            } else {
-                TransferHelper.safeTransferFrom(token, msg.sender, pair, amountToken);
-
-                /// @dev convert eth to WETH
-                IWETH(WETH).deposit{ value: msg.value }();
-                IWETH(WETH).transfer(pair, msg.value);
-            }
+        /// @dev send back remaining eth
+        if (amountETH < msg.value) {
+            TransferHelper.safeTransferETH(msg.sender, msg.value - amountETH);
         }
 
         liquidity = IUniswapV2Pair(pair).mint(to);
@@ -230,8 +233,8 @@ contract BogdanRouterV3 is IUniswapV2Router02 {
         (address token1, ) = UniswapV2Library.sortTokens(tokenA, tokenB);
         (amountA, amountB) = token1 == tokenA ? (amountA, amountB) : (amountB, amountA);
 
-        require(amountA >= amountAMin, "Insuficient amount");
-        require(amountB >= amountBMin, "Insuficient amount2");
+        require(amountA >= amountAMin, "Amount of first token is less than expected");
+        require(amountB >= amountBMin, "Amount of second token is less than expected");
 
         emit RemoveLiquidity(to, amountA, amountB);
     }
@@ -266,8 +269,8 @@ contract BogdanRouterV3 is IUniswapV2Router02 {
         (address token1, ) = UniswapV2Library.sortTokens(token, WETH);
         (amountToken, amountETH) = token1 == token ? (amount1, amount2) : (amount2, amount1);
 
-        require(amountToken >= amountTokenMin, "Insuficient amount");
-        require(amountETH >= amountETHMin, "Insuficient amount2");
+        require(amountToken >= amountTokenMin, "Amount of token is less than expected");
+        require(amountETH >= amountETHMin, "Eth amount is less than expected");
 
         /// @dev send tokens to "to"
         TransferHelper.safeTransfer(token, to, amountToken);
@@ -277,6 +280,43 @@ contract BogdanRouterV3 is IUniswapV2Router02 {
         TransferHelper.safeTransferETH(to, amountETH);
 
         emit RemoveLiquidityETH(to, amountToken, amountETH);
+    }
+
+    /**
+     * @notice Swap functionality
+     * @param path represents an array with addresses that are the tokens between the swap is made
+     * @param to represents the address that will consume liquidity
+     * @param amounts represents the amounts for each pair
+     */
+    function _swap(
+        address[] memory path,
+        address to,
+        uint256[] memory amounts
+    ) internal {
+        /// @dev iterate through path and swap tokens
+        for (uint256 i; i < path.length - 1; ++i) {
+            /// @dev sort token to know what value to attribute to amount0Out and amount1Out.
+            /// @dev check swap function from Pair contract
+            (address input, ) = UniswapV2Library.sortTokens(path[i], path[i + 1]);
+
+            /// @dev it is known that the path indicate the input token and output token,
+            /// @dev so the output amount will correspond to i + 1
+            uint256 amountOut = amounts[i + 1];
+
+            /// @dev we use uint256(0) because the we need to get only one amount of tokens from swap
+            (uint256 amount0Out, uint256 amount1Out) = input == path[i]
+                ? (uint256(0), amountOut)
+                : (amountOut, uint256(0));
+
+            address pair = UniswapV2Library.pairFor(factory, path[i], path[i + 1]);
+
+            /// @dev move funds from pair to pair and last to "to"
+            address destination = i < path.length - 2
+                ? UniswapV2Library.pairFor(factory, path[i + 1], path[i + 2])
+                : to;
+
+            IUniswapV2Pair(pair).swap(amount0Out, amount1Out, destination, new bytes(0));
+        }
     }
 
     /**
@@ -299,7 +339,7 @@ contract BogdanRouterV3 is IUniswapV2Router02 {
             "No output pair"
         );
         amounts = UniswapV2Library.getAmountsOut(factory, amountIn, path);
-        require(amounts[amounts.length - 1] >= amountOutMin, "Insufficient amount");
+        require(amounts[amounts.length - 1] >= amountOutMin, "Output amount is less than the minimum amount");
 
         /// @dev send the input token to first pair
         TransferHelper.safeTransferFrom(
@@ -309,30 +349,8 @@ contract BogdanRouterV3 is IUniswapV2Router02 {
             amounts[0]
         );
 
-        /// @dev iterate through path and swap tokens
-        for (uint256 i; i < path.length - 1; ++i) {
-            /// @dev sort token to know what value to attribute to amount0Out and amount1Out.
-            /// @dev check swap function from Pair contract
-            (address input, address output) = UniswapV2Library.sortTokens(path[i], path[i + 1]);
+        _swap(path, to, amounts);
 
-            /// @dev it is known that the path indicate the input token and output token,
-            /// @dev so the output amount will correspond to i + 1
-            uint256 amountOut = amounts[i + 1];
-
-            /// @dev we use uint256(0) because the we need to get only one amount of tokens from swap
-            (uint256 amount0Out, uint256 amount1Out) = input == path[i]
-                ? (uint256(0), amountOut)
-                : (amountOut, uint256(0));
-
-            address pair = UniswapV2Library.pairFor(factory, path[i], path[i + 1]);
-
-            /// @dev move funds from pair to pair and last to "to"
-            address destination = i < path.length - 2
-                ? UniswapV2Library.pairFor(factory, path[i + 1], path[i + 2])
-                : to;
-
-            IUniswapV2Pair(pair).swap(amount0Out, amount1Out, destination, new bytes(0));
-        }
         emit SwapExactTokensForTokens(amountIn, amounts[amounts.length - 1]);
     }
 
@@ -352,7 +370,7 @@ contract BogdanRouterV3 is IUniswapV2Router02 {
         /// @dev check if first address in the path corresponds to WETH
         require(path[0] == WETH, "First address have to be WETH");
         amounts = UniswapV2Library.getAmountsOut(factory, msg.value, path);
-        require(amounts[amounts.length - 1] >= amountOutMin, "Insufficient amount");
+        require(amounts[amounts.length - 1] >= amountOutMin, "Output amount is less than the minimum amount");
 
         /// @dev convert eth to WETH
         IWETH(WETH).deposit{ value: msg.value }();
@@ -360,29 +378,8 @@ contract BogdanRouterV3 is IUniswapV2Router02 {
         /// @dev send the WETH to first pair
         IWETH(WETH).transfer(UniswapV2Library.pairFor(factory, path[0], path[1]), amounts[0]);
 
-        for (uint256 i; i < path.length - 1; ++i) {
-            /// @dev sort token to know what value to attribute to amount0Out and amount1Out.
-            /// @dev check swap function from Pair contract
-            (address input, address output) = UniswapV2Library.sortTokens(path[i], path[i + 1]);
+        _swap(path, to, amounts);
 
-            /// @dev it is known that the path indicate the input token and output token,
-            /// @dev so the output amount will correspond to i + 1
-            uint256 amountOut = amounts[i + 1];
-
-            /// @dev we use uint256(0) because the we need to get only one amount of tokens from swap
-            (uint256 amount0Out, uint256 amount1Out) = input == path[i]
-                ? (uint256(0), amountOut)
-                : (amountOut, uint256(0));
-
-            address pair = UniswapV2Library.pairFor(factory, path[i], path[i + 1]);
-
-            /// @dev move funds from pair to pair and last to "to"
-            address destination = i < path.length - 2
-                ? UniswapV2Library.pairFor(factory, path[i + 1], path[i + 2])
-                : to;
-
-            IUniswapV2Pair(pair).swap(amount0Out, amount1Out, destination, new bytes(0));
-        }
         emit SwapExactETHForTokens(msg.value, amounts[amounts.length - 1]);
     }
 
@@ -402,7 +399,7 @@ contract BogdanRouterV3 is IUniswapV2Router02 {
         uint256 deadline
     ) external virtual override returns (uint256[] memory amounts) {
         amounts = UniswapV2Library.getAmountsIn(factory, amountOut, path);
-        require(amounts[0] <= amountInMax, "Insufficient amount");
+        require(amounts[0] <= amountInMax, "Input amount is greater than the maximum amount");
 
         /// @dev send the input tokens to first pair
         TransferHelper.safeTransferFrom(
@@ -412,29 +409,7 @@ contract BogdanRouterV3 is IUniswapV2Router02 {
             amounts[0]
         );
 
-        for (uint256 i; i < path.length - 1; ++i) {
-            /// @dev sort token to know what value to attribute to amount0Out and amount1Out.
-            /// @dev check swap function from Pair contract
-            (address input, address output) = UniswapV2Library.sortTokens(path[i], path[i + 1]);
-
-            /// @dev it is known that the path indicate the input token and output token,
-            /// @dev so the output amount will correspond to i + 1
-            uint256 amountOut = amounts[i + 1];
-
-            /// @dev we use uint256(0) because the we need to get only one amount of tokens from swap
-            (uint256 amount0Out, uint256 amount1Out) = input == path[i]
-                ? (uint256(0), amountOut)
-                : (amountOut, uint256(0));
-
-            address pair = UniswapV2Library.pairFor(factory, path[i], path[i + 1]);
-
-            /// @dev move funds from pair to pair and last to "to"
-            address destination = i < path.length - 2
-                ? UniswapV2Library.pairFor(factory, path[i + 1], path[i + 2])
-                : to;
-
-            IUniswapV2Pair(pair).swap(amount0Out, amount1Out, destination, new bytes(0));
-        }
+        _swap(path, to, amounts);
 
         emit SwapTokensForExactTokens(amounts[0], amountOut);
     }
@@ -455,7 +430,7 @@ contract BogdanRouterV3 is IUniswapV2Router02 {
         uint256 deadline
     ) external virtual override returns (uint256[] memory amounts) {
         /// @dev check if last address in the path corresponds to WETH
-        require(path[path.length - 1] == WETH, "Last pair have to be WETH");
+        require(path[path.length - 1] == WETH, "Last address have to be WETH");
         amounts = UniswapV2Library.getAmountsIn(factory, amountOut, path);
         require(amounts[0] <= amountInMax, "To much amount required");
 
@@ -466,29 +441,8 @@ contract BogdanRouterV3 is IUniswapV2Router02 {
             UniswapV2Library.pairFor(factory, path[0], path[1]),
             amounts[0]
         );
-        for (uint256 i; i < path.length - 1; ++i) {
-            /// @dev sort token to know what value to attribute to amount0Out and amount1Out.
-            /// @dev check swap function from Pair contract
-            (address input, address output) = UniswapV2Library.sortTokens(path[i], path[i + 1]);
 
-            /// @dev it is known that the path indicate the input token and output token,
-            /// @dev so the output amount will correspond to i + 1
-            uint256 amountOut = amounts[i + 1];
-
-            /// @dev we use uint256(0) because the we need to get only one amount of tokens from swap
-            (uint256 amount0Out, uint256 amount1Out) = input == path[i]
-                ? (uint256(0), amountOut)
-                : (amountOut, uint256(0));
-
-            address pair = UniswapV2Library.pairFor(factory, path[i], path[i + 1]);
-
-            /// @dev move funds from pair to pair and last in the current contract
-            /// @dev send to the current contract, because the output is in WETH, and to user we have to send eth
-            address destination = i < path.length - 2
-                ? UniswapV2Library.pairFor(factory, path[i + 1], path[i + 2])
-                : address(this);
-            IUniswapV2Pair(pair).swap(amount0Out, amount1Out, destination, new bytes(0));
-        }
+        _swap(path, address(this), amounts);
 
         /// @dev change the WETH amount to eth(withdraw) and send to "to"
         IWETH(WETH).withdraw(amounts[amounts.length - 1]);
@@ -550,7 +504,7 @@ contract BogdanRouterV3 is IUniswapV2Router02 {
         uint256 deadline
     ) external virtual override returns (uint256[] memory amounts) {
         /// @dev check if last address in the path corresponds to WETH
-        require(path[path.length - 1] == WETH, "Incorrect path");
+        require(path[path.length - 1] == WETH, "Last address have to be WETH");
         amounts = UniswapV2Library.getAmountsOut(factory, amountIn, path);
         require(amounts[amounts.length - 1] >= amountOutMin, "Output amount is less than min");
 
@@ -561,34 +515,7 @@ contract BogdanRouterV3 is IUniswapV2Router02 {
             UniswapV2Library.pairFor(factory, path[0], path[1]),
             amounts[0]
         );
-
-        for (uint256 i; i < path.length - 1; ++i) {
-            /// @dev sort token to know what value to attribute to amount0Out and amount1Out.
-            /// @dev check swap function from Pair contract
-            (address token1, address token2) = UniswapV2Library.sortTokens(path[i], path[i + 1]);
-
-            /// @dev it is known that the path indicate the input token and output token,
-            /// @dev so the output amount will correspond to i + 1
-            uint256 amountOut = amounts[i + 1];
-
-            /// @dev we use uint256(0) because the we need to get only one amount of tokens from swap
-            (uint256 amount0Out, uint256 amount1Out) = token1 == path[i]
-                ? (uint256(0), amountOut)
-                : (amountOut, uint256(0));
-
-            /// @dev move funds from pair to pair and last in the current contract
-            /// @dev send in the last to the current contract because the output is in WETH, and to user we have to send eth
-            address destination = i < path.length - 2
-                ? UniswapV2Library.pairFor(factory, path[i + 1], path[i + 2])
-                : address(this);
-
-            IUniswapV2Pair(UniswapV2Library.pairFor(factory, token1, token2)).swap(
-                amount0Out,
-                amount1Out,
-                destination,
-                new bytes(0)
-            );
-        }
+        _swap(path, address(this), amounts);
 
         /// @dev change the WETH amount to eth(withdraw) and send to "to"
         IWETH(WETH).withdraw(amounts[amounts.length - 1]);
@@ -611,7 +538,7 @@ contract BogdanRouterV3 is IUniswapV2Router02 {
         uint256 deadline
     ) external payable virtual override returns (uint256[] memory amounts) {
         /// @dev check if first address in the path corresponds to WETH
-        require(path[0] == WETH, "Incorrect path");
+        require(path[0] == WETH, "First address in path have to be WETH");
         amounts = UniswapV2Library.getAmountsIn(factory, amountOut, path);
         require(amounts[0] <= msg.value, "Required input is less than msg.value");
 
@@ -621,32 +548,7 @@ contract BogdanRouterV3 is IUniswapV2Router02 {
         /// @dev send the WETH to first pair
         IWETH(WETH).transfer(UniswapV2Library.pairFor(factory, WETH, path[1]), amounts[0]);
 
-        for (uint256 i; i < path.length - 1; ++i) {
-            /// @dev sort token to know what value to attribute to amount0Out and amount1Out.
-            /// @dev check swap function from Pair contract
-            (address token1, address token2) = UniswapV2Library.sortTokens(path[i], path[i + 1]);
-
-            /// @dev it is known that the path indicate the input token and output token,
-            /// @dev so the output amount will correspond to i + 1
-            uint256 amountOut = amounts[i + 1];
-
-            /// @dev we use uint256(0) because the we need to get only one amount of tokens from swap
-            (uint256 amount0Out, uint256 amount1Out) = token1 == path[i]
-                ? (uint256(0), amountOut)
-                : (amountOut, uint256(0));
-
-            /// @dev move funds from pair to pair and last to "to"
-            address destination = i < path.length - 2
-                ? UniswapV2Library.pairFor(factory, path[i + 1], path[i + 2])
-                : to;
-
-            IUniswapV2Pair(UniswapV2Library.pairFor(factory, token1, token2)).swap(
-                amount0Out,
-                amount1Out,
-                destination,
-                new bytes(0)
-            );
-        }
+        _swap(path, to, amounts);
 
         /// @dev send back extra eth
         if (amounts[0] < msg.value) TransferHelper.safeTransferETH(msg.sender, msg.value - amounts[0]);

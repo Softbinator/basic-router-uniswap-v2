@@ -7182,7 +7182,7 @@
           name: "BogdanRouterV2",
           author: "Softbinator Technologies",
           notice:
-            "This Contract is made after Uniswap V2 router contract DISCLAIMER - These contracts are not audited, use at your own risk!",
+            "This Contract is made after Uniswap V2 router contractDISCLAIMER - These contracts are not audited, use at your own risk!",
           constructor: {
             inputs: [
               { internalType: "address", name: "_factory", type: "address" },
@@ -7732,12 +7732,6 @@
               anonymous: !1,
               inputs: [{ indexed: !1, internalType: "uint256", name: "", type: "uint256" }],
               name: "LiqETH",
-              type: "event",
-            },
-            "Liquidity(uint256)": {
-              anonymous: !1,
-              inputs: [{ indexed: !1, internalType: "uint256", name: "", type: "uint256" }],
-              name: "Liquidity",
               type: "event",
             },
             "RemoveLiquidity(address,uint256,uint256)": {
