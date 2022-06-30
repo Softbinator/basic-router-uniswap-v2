@@ -344,7 +344,7 @@ describe("Router V3 tests", function () {
     ).to.be.revertedWith("expected amount A < amountAMin");
   });
 
-  it("Add liquidity eth but required token is not in limits and require eth < min eth dynamic -", async () => {
+  it("Add liquidity eth but required token is not in limits and require eth < min eth", async () => {
     let _totalSupply = await addFirstLiquidityETHTest(Token1, user, Router);
 
     let amountTokenDesired: BigNumber = ethers.utils.parseEther("4");
